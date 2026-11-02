@@ -50,11 +50,17 @@ class PlanFlowTest {
         fake.reset();
     }
 
-    static final Function<PlanRequest, GeneratedPlan> VALID = req -> new GeneratedPlan(List.of(
-            new PlannedMilestone("Basics", req.taskWindowEnd(), List.of(
-                    new PlannedTask("Install JDK", req.today(), 30),
-                    new PlannedTask("Hello world", req.today().plusDays(1), 45))),
-            new PlannedMilestone("Projects", req.deadline(), List.of())));
+    /** Today: "Install JDK"; then one 45-minute task per remaining window day. */
+    static final Function<PlanRequest, GeneratedPlan> VALID = req -> {
+        List<PlannedTask> tasks = new java.util.ArrayList<>();
+        tasks.add(new PlannedTask("Install JDK", req.today(), 30));
+        for (LocalDate d = req.today().plusDays(1); !d.isAfter(req.taskWindowEnd()); d = d.plusDays(1)) {
+            tasks.add(new PlannedTask("Practice " + d, d, 45));
+        }
+        return new GeneratedPlan(List.of(
+                new PlannedMilestone("Basics", req.taskWindowEnd(), tasks),
+                new PlannedMilestone("Projects", req.deadline(), List.of())));
+    };
 
     static final Function<PlanRequest, GeneratedPlan> OVER_LIMIT = req -> new GeneratedPlan(List.of(
             new PlannedMilestone("Basics", req.taskWindowEnd(), List.of(
@@ -69,7 +75,7 @@ class PlanFlowTest {
         mvc.perform(post(plan(goalId)).header("Authorization", bearer(token)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.milestones.length()").value(2))
-                .andExpect(jsonPath("$.milestones[0].tasks.length()").value(2))
+                .andExpect(jsonPath("$.milestones[0].tasks.length()").value(14))
                 .andExpect(jsonPath("$.milestones[1].tasks").isEmpty());
 
         mvc.perform(get("/api/v1/goals/" + goalId + "/tasks").header("Authorization", bearer(token)))

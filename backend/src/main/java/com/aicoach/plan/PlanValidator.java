@@ -5,6 +5,7 @@ import com.aicoach.plan.GeneratedPlan.PlannedTask;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +17,10 @@ public class PlanValidator {
 
     static final int MAX_TITLE = 200;
     static final int MAX_MILESTONES = 12;
+    /** The final milestone may end at most this many days before the deadline. */
+    static final int MAX_DAYS_SHORT_OF_DEADLINE = 7;
+    /** Planned minutes in the task window must reach this share of the time the user has. */
+    static final double MIN_WINDOW_UTILIZATION = 0.5;
 
     public List<String> validate(GeneratedPlan plan, PlanRequest req) {
         List<String> errors = new ArrayList<>();
@@ -64,6 +69,21 @@ public class PlanValidator {
                     minutesByDay.merge(t.date(), t.minutes(), Integer::sum);
                 }
             }
+        }
+
+        if (previousTarget != null
+                && previousTarget.isBefore(req.deadline().minusDays(MAX_DAYS_SHORT_OF_DEADLINE))) {
+            errors.add("The last milestone ends on " + previousTarget + "; milestones must cover the goal up to "
+                    + "the deadline " + req.deadline() + " (within " + MAX_DAYS_SHORT_OF_DEADLINE + " days)");
+        }
+
+        long windowDays = ChronoUnit.DAYS.between(req.today(), req.taskWindowEnd()) + 1;
+        long available = windowDays * req.minutesPerDay();
+        long minimum = Math.round(available * MIN_WINDOW_UTILIZATION);
+        int planned = minutesByDay.values().stream().mapToInt(Integer::intValue).sum();
+        if (taskCount > 0 && planned < minimum) {
+            errors.add("Tasks from " + req.today() + " to " + req.taskWindowEnd() + " total " + planned
+                    + " minutes; plan at least " + minimum + " of the " + available + " available minutes");
         }
 
         if (taskCount == 0) {
