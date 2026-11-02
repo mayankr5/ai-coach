@@ -1,0 +1,61 @@
+spring:
+  application:
+    name: ai-coach
+  autoconfigure:
+    # Auth is JWT-based; skip Spring's default in-memory user and generated password
+    exclude: org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/aicoach}
+    username: ${DB_USERNAME:aicoach}
+    password: ${DB_PASSWORD:aicoach}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+  ai:
+    model:
+      # Which provider answers chat calls: ollama | anthropic | openai | google-genai
+      chat: ${AI_PROVIDER:ollama}
+      # Only chat is used; keep other model types off so unused providers need no keys
+      embedding: none
+      image: none
+      audio:
+        speech: none
+        transcription: none
+      moderation: none
+    ollama:
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+      chat:
+        options:
+          model: ${OLLAMA_MODEL:llama3}
+          temperature: 0.3
+    anthropic:
+      api-key: ${ANTHROPIC_API_KEY:}
+      chat:
+        options:
+          model: ${ANTHROPIC_MODEL:claude-sonnet-5-5}
+          temperature: 0.3
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+    google:
+      genai:
+        api-key: ${GEMINI_API_KEY:}
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:dev-only-secret-change-me-dev-only-secret-change-me}
+    access-token-ttl: 15m
+    refresh-token-ttl: 7d
+  planning:
+    # Tasks are only scheduled this many days ahead; daily re-planning extends the window
+    task-window-days: 14
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
