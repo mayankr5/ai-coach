@@ -51,6 +51,8 @@ app:
   planning:
     # Tasks are only scheduled this many days ahead; daily re-planning extends the window
     task-window-days: 14
+    # Hourly would also work; daily at 03:00 UTC covers every timezone's "yesterday" by then
+    missed-day-cron: ${MISSED_DAY_CRON:0 0 3 * * *}
   cors:
     allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
 

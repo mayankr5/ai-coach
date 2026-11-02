@@ -37,6 +37,9 @@ Tests use Testcontainers, so Docker must be running: `cd backend && ./mvnw test`
 | DELETE | `/api/v1/goals/{id}` | Bearer token |
 | GET  | `/api/v1/goals/{id}/tasks?date=YYYY-MM-DD` (default: today in the user's timezone) | Bearer token |
 | PATCH | `/api/v1/tasks/{id}` | Bearer token |
+| POST | `/api/v1/goals/{id}/check-ins` (record today's/yesterday's results, then re-plan) | Bearer token |
+| GET  | `/api/v1/goals/{id}/check-ins` | Bearer token |
+| GET  | `/api/v1/goals/{id}/progress` | Bearer token |
 | POST | `/api/v1/goals/{id}/plan` (AI-generated; 409 once progress exists, 502 on AI failure) | Bearer token |
 
 ## AI provider
@@ -49,6 +52,8 @@ Plans are generated through Spring AI, so any supported model works. Pick one wi
 | Anthropic | `AI_PROVIDER=anthropic`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` |
 | OpenAI | `AI_PROVIDER=openai`, `OPENAI_API_KEY` |
 | Gemini | `AI_PROVIDER=google-genai`, `GEMINI_API_KEY` |
+
+After each check-in the AI proposes changes (move, resize, remove, add) to upcoming tasks. If it is down or its changes break the rules, a rule-based planner re-schedules missed work instead, so check-ins never fail. A nightly job (`MISSED_DAY_CRON`, default 03:00 UTC) marks overdue tasks as skipped for goals with no check-in and re-plans them without calling the AI.
 
 Every plan is checked by `PlanValidator` (dates, daily minute limit, milestone order) whatever the model.
 

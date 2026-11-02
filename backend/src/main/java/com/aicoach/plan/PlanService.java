@@ -125,6 +125,7 @@ public class PlanService {
 
         PlanRevision revision = new PlanRevision();
         revision.setGoal(goal);
+        revision.setSource(RevisionSource.INITIAL);
         revision.setSummary("Initial plan: " + plan.milestones().size() + " milestones, "
                 + newTasks.size() + " tasks");
         revisions.save(revision);

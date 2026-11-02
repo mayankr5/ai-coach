@@ -40,4 +40,7 @@ public class Task {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private TaskStatus status = TaskStatus.PENDING;
+
+    @Column(name = "carried_over", nullable = false)
+    private boolean carriedOver;
 }

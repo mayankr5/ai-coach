@@ -26,6 +26,10 @@ public class PlanRevision {
     @Column(nullable = false)
     private String summary;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private RevisionSource source = RevisionSource.INITIAL;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 }
