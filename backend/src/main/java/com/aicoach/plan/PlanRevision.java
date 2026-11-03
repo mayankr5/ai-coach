@@ -30,6 +30,10 @@ public class PlanRevision {
     @Column(nullable = false)
     private RevisionSource source = RevisionSource.INITIAL;
 
+    /** "provider/model" that wrote the plan or message; null when no AI was involved. */
+    @Column(name = "ai_model")
+    private String aiModel;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 }

@@ -123,7 +123,8 @@ class CheckInFlowTest {
         mvc.perform(get(checkIns()).header("Authorization", bearer(token)))
                 .andExpect(jsonPath("$.content[0].note").value("Felt easy"))
                 .andExpect(jsonPath("$.content[0].coachMessage").value("Great start! Tomorrow continues with the next topic."));
-        assertThat(revisions.findAll()).anyMatch(r -> r.getSource() == RevisionSource.AI);
+        assertThat(revisions.findAll()).anyMatch(r -> r.getSource() == RevisionSource.AI
+                && FakeCoachWriter.MODEL.equals(r.getAiModel()));
     }
 
     @Test

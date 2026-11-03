@@ -29,13 +29,13 @@ Tasks are treated as a series, so leftover work must come first, not land weeks 
 ## Known problems (found 2026-11-03)
 - [ ] **Order within a day:** tasks on the same day are listed by creation id, so a catch-up task shows
       after that day's planned work (and the AI message describes it that way). Add a position field.
-- [ ] **Unreadable AI answers fail at once:** a plan with an impossible date ("2026-11-31") can't be parsed,
+- [x] **Unreadable AI answers fail at once:** a plan with an impossible date ("2026-11-31") can't be parsed,
       which is treated as "provider down" (502) with no retry. Retry once and tell the model what was wrong.
-- [ ] **No timeout on AI calls:** `gemini-3.8-flash` never answered and the request hung for minutes.
+- [x] **No timeout on AI calls:** `gemini-3.8-flash` never answered and the request hung for minutes.
       Set a read timeout so a slow provider fails fast (plan → 502, check-in → fixed message).
 - [ ] **Free tier limits:** Gemini free quota can be very low and changes without notice; when it runs out,
       plan generation returns 502. Fine for personal testing, not for real users.
-- [ ] **Tests read the local `backend/.env`:** harmless today (AI is faked), but tests shouldn't depend on a
+- [x] **Tests read the local `backend/.env`:** harmless today (AI is faked), but tests shouldn't depend on a
       developer's local config. Ignore `.env` in tests.
 - [ ] **Extra-time streak only sees future days:** "max 2 extra days in a row" doesn't count catch-up days
       already in the past.
@@ -43,5 +43,7 @@ Tasks are treated as a series, so leftover work must come first, not land weeks 
       Gemini is much better; consider checking that the message mentions only real changes.
 
 ## Later
+- [ ] Circuit breaker (Resilience4j): skip a model for a few minutes after repeated failures instead of
+      waiting for its timeout on every request
 - [ ] Fill new days as the 14-day window moves (maybe covered by Stage 1 shifting; re-check after it)
 - [ ] Optional: let AI pick a strategy (e.g. split a too-big task) that code then executes

@@ -1,15 +1,16 @@
 package com.aicoach.replan;
 
-import com.aicoach.plan.AiUnavailableException;
+import com.aicoach.ai.AiChain;
+import com.aicoach.ai.AiProperties;
+import com.aicoach.ai.AiResult;
+import com.aicoach.ai.AiTask;
 import com.aicoach.replan.PlanChanges.TaskChange;
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.util.*;
 
-/** Provider-agnostic coach message writer backed by whichever model spring.ai.model.chat selects. */
+/** Writes coach messages through the AI chain, so any configured model can answer. */
 @Component
 public class AiCoachWriter implements CoachWriter {
 
@@ -27,31 +28,35 @@ public class AiCoachWriter implements CoachWriter {
     record CoachMessage(String message) {
     }
 
-    private final ChatClient chatClient;
+    private final AiChain chain;
+    private final AiProperties props;
 
-    public AiCoachWriter(ChatClient.Builder builder) {
-        this.chatClient = builder.defaultSystem(SYSTEM_PROMPT)
-                // Logs prompts and responses at DEBUG: logging.level.org.springframework.ai.chat.client.advisor=DEBUG
-                .defaultAdvisors(new SimpleLoggerAdvisor())
-                .build();
+    public AiCoachWriter(AiChain chain, AiProperties props) {
+        this.chain = chain;
+        this.props = props;
     }
 
     @Override
-    public String write(RePlanRequest req, CatchUpPlan plan) {
-        CoachMessage result;
-        try {
-            result = chatClient.prompt().user(userPrompt(req, plan)).call().entity(CoachMessage.class);
-        } catch (RuntimeException e) {
-            throw new AiUnavailableException("AI provider failed to write a coach message", e);
-        }
-        if (result == null || result.message() == null || result.message().isBlank()
-                || result.message().length() > MAX_MESSAGE) {
-            throw new AiUnavailableException("AI returned an empty or too long coach message");
-        }
-        return result.message().strip();
+    public AiResult<String> write(RePlanRequest req, CatchUpPlan plan) {
+        AiResult<CoachMessage> result = chain.call(new AiTask<>("write a coach message", props.messageTimeout(),
+                props.messageBudget(),
+                (client, problems) -> client.prompt().system(SYSTEM_PROMPT).user(userPrompt(req, plan, problems))
+                        .call().entity(CoachMessage.class),
+                AiCoachWriter::check));
+        return new AiResult<>(result.value().message().strip(), result.model());
     }
 
-    private static String userPrompt(RePlanRequest req, CatchUpPlan plan) {
+    private static List<String> check(CoachMessage m) {
+        if (m.message() == null || m.message().isBlank()) {
+            return List.of("The message is empty");
+        }
+        if (m.message().length() > MAX_MESSAGE) {
+            return List.of("The message is " + m.message().length() + " characters; keep it under " + MAX_MESSAGE);
+        }
+        return List.of();
+    }
+
+    private static String userPrompt(RePlanRequest req, CatchUpPlan plan, List<String> problems) {
         StringBuilder sb = new StringBuilder()
                 .append("Goal: ").append(req.title()).append('\n')
                 .append("Experience level: ").append(req.experienceLevel()).append('\n')
@@ -86,6 +91,10 @@ public class AiCoachWriter implements CoachWriter {
 
         sb.append("\nNext tasks:\n");
         nextTasks(req, plan).forEach(line -> sb.append("- ").append(line).append('\n'));
+        if (!problems.isEmpty()) {
+            sb.append("\nYour previous answer was rejected. Fix these problems:\n");
+            problems.forEach(p -> sb.append("- ").append(p).append('\n'));
+        }
         return sb.toString();
     }
 

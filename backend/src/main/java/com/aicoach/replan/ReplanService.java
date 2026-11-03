@@ -1,5 +1,6 @@
 package com.aicoach.replan;
 
+import com.aicoach.ai.AiResult;
 import com.aicoach.common.NotFoundException;
 import com.aicoach.goal.Goal;
 import com.aicoach.goal.GoalRepository;
@@ -70,10 +71,13 @@ public class ReplanService {
         CatchUpPlan plan = scheduler.schedule(request);
 
         String message = null;
+        String model = null;
         RevisionSource source = useAi ? RevisionSource.AI : RevisionSource.NIGHTLY;
         if (useAi) {
             try {
-                message = coachWriter.write(request, plan);
+                AiResult<String> written = coachWriter.write(request, plan);
+                message = written.value();
+                model = written.model();
             } catch (AiUnavailableException e) {
                 log.warn("AI coach message unavailable for goal {}, using default: {}", goalId, e.getMessage());
                 source = RevisionSource.FALLBACK;
@@ -85,7 +89,8 @@ public class ReplanService {
 
         PlanChanges changes = new PlanChanges(message, plan.changes());
         RevisionSource finalSource = source;
-        tx.executeWithoutResult(status -> apply(findGoal(goalId), request, changes, finalSource));
+        String finalModel = model;
+        tx.executeWithoutResult(status -> apply(findGoal(goalId), request, changes, finalSource, finalModel));
         return new ReplanResult(message, source);
     }
 
@@ -144,7 +149,7 @@ public class ReplanService {
         return total == 0 ? null : done / total;
     }
 
-    private void apply(Goal goal, RePlanRequest request, PlanChanges changes, RevisionSource source) {
+    private void apply(Goal goal, RePlanRequest request, PlanChanges changes, RevisionSource source, String model) {
         // Only tasks still upcoming and pending may change; anything the user touched meanwhile is left alone
         Map<Long, Task> editable = tasks.findUpcomingPending(goal.getId(), request.from()).stream()
                 .collect(Collectors.toMap(Task::getId, Function.identity()));
@@ -185,6 +190,7 @@ public class ReplanService {
         PlanRevision revision = new PlanRevision();
         revision.setGoal(goal);
         revision.setSource(source);
+        revision.setAiModel(model);
         revision.setSummary(changes.coachMessage());
         revisions.save(revision);
     }

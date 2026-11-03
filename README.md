@@ -42,21 +42,26 @@ Tests use Testcontainers, so Docker must be running: `cd backend && ./mvnw test`
 | GET  | `/api/v1/goals/{id}/progress` | Bearer token |
 | POST | `/api/v1/goals/{id}/plan` (AI-generated; 409 once progress exists, 502 on AI failure) | Bearer token |
 
-## AI provider
+## AI models
 
-Plans are generated through Spring AI, so any supported model works. Pick one with environment variables:
+Any model supported by Spring AI works, and several can be chained: `AI_CHAIN` lists `provider/model`
+entries tried in order until one gives a usable answer (default `google-genai/gemini-3.6-flash,ollama/qwen2.5:7b`).
 
-| Provider | Settings |
-| --- | --- |
-| Ollama (default, local, free) | `AI_PROVIDER=ollama`, `OLLAMA_MODEL=llama3` |
-| Anthropic | `AI_PROVIDER=anthropic`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` |
-| OpenAI | `AI_PROVIDER=openai`, `OPENAI_API_KEY` |
-| Gemini | `AI_PROVIDER=google-genai`, `GEMINI_API_KEY`, `GEMINI_MODEL` (default `gemini-3.6-flash`) |
+| Provider | Chain entry | Key |
+| --- | --- | --- |
+| Gemini | `google-genai/<model>` | `GEMINI_API_KEY` |
+| Ollama (local, free) | `ollama/<model>` | none (`OLLAMA_BASE_URL`, default `http://localhost:11434`) |
+| Anthropic | `anthropic/<model>` | `ANTHROPIC_API_KEY` |
+| OpenAI | `openai/<model>` | `OPENAI_API_KEY` |
 
-For local development, put these in `backend/.env` (git-ignored, loaded automatically), e.g.:
+Entries without a key are skipped at startup. Each call has a timeout and all attempts share a time budget
+(`app.ai.*` in `application.yml`). A model gets one more try after a server error or a bad answer (the problems
+are sent back, also to the next model); timeouts, quota limits (429) and permanent errors move straight to the
+next model. The model that produced each plan or message is saved in `plan_revisions.ai_model`.
+
+For local development, put keys in `backend/.env` (git-ignored, loaded automatically; tests ignore it), e.g.:
 
 ```
-AI_PROVIDER=google-genai
 GEMINI_API_KEY=your-key
 ```
 

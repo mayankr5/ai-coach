@@ -1,5 +1,6 @@
 package com.aicoach.replan;
 
+import com.aicoach.ai.AiResult;
 import com.aicoach.plan.AiUnavailableException;
 
 import java.util.ArrayList;
@@ -7,6 +8,8 @@ import java.util.List;
 
 /** Test double: returns scripted messages and records every call. Throws when the script is empty. */
 public class FakeCoachWriter implements CoachWriter {
+
+    public static final String MODEL = "fake/coach";
 
     private final List<String> script = new ArrayList<>();
     public final List<RePlanRequest> requests = new ArrayList<>();
@@ -23,12 +26,12 @@ public class FakeCoachWriter implements CoachWriter {
     }
 
     @Override
-    public String write(RePlanRequest request, CatchUpPlan plan) {
+    public AiResult<String> write(RePlanRequest request, CatchUpPlan plan) {
         requests.add(request);
         plans.add(plan);
         if (script.isEmpty()) {
             throw new AiUnavailableException("No scripted coach message");
         }
-        return script.removeFirst();
+        return new AiResult<>(script.removeFirst(), MODEL);
     }
 }

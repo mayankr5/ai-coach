@@ -44,6 +44,8 @@ class PlanFlowTest {
     MockMvc mvc;
     @Autowired
     FakePlanGenerator fake;
+    @Autowired
+    PlanRevisionRepository revisions;
 
     @BeforeEach
     void resetFake() {
@@ -84,26 +86,12 @@ class PlanFlowTest {
 
         mvc.perform(get("/api/v1/goals/" + goalId).header("Authorization", bearer(token)))
                 .andExpect(jsonPath("$.milestones[0].title").value("Basics"));
+        assertThat(revisions.findAll()).anyMatch(r -> FakePlanGenerator.MODEL.equals(r.getAiModel()));
     }
 
     @Test
-    void retriesWithErrorsThenSucceeds() throws Exception {
-        fake.willReturn(OVER_LIMIT);
-        fake.willReturn(VALID);
-        String token = register();
-        long goalId = createGoal(token);
-
-        mvc.perform(post(plan(goalId)).header("Authorization", bearer(token)))
-                .andExpect(status().isOk());
-
-        assertThat(fake.receivedErrors).hasSize(2);
-        assertThat(fake.receivedErrors.get(0)).isEmpty();
-        assertThat(fake.receivedErrors.get(1)).anyMatch(e -> e.contains("500 minutes"));
-    }
-
-    @Test
-    void invalidTwiceIs502AndSavesNothing() throws Exception {
-        fake.willReturn(OVER_LIMIT);
+    void invalidPlanIs502AndSavesNothing() throws Exception {
+        // Retries happen inside the AI chain (AiPlanGeneratorTest); this is PlanService's final guard
         fake.willReturn(OVER_LIMIT);
         String token = register();
         long goalId = createGoal(token);
@@ -143,7 +131,7 @@ class PlanFlowTest {
 
         mvc.perform(post(plan(goalId)).header("Authorization", bearer(register())))
                 .andExpect(status().isNotFound());
-        assertThat(fake.receivedErrors).isEmpty();
+        assertThat(fake.requests).isEmpty();
     }
 
     private String register() throws Exception {

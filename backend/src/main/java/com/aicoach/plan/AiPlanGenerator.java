@@ -1,15 +1,24 @@
 package com.aicoach.plan;
 
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
+import com.aicoach.ai.AiChain;
+import com.aicoach.ai.AiProperties;
+import com.aicoach.ai.AiResult;
+import com.aicoach.ai.AiTask;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
-/** Provider-agnostic generator: the ChatClient is backed by whichever model spring.ai.model.chat selects. */
+/**
+ * Asks the AI chain for a plan. Out-of-window tasks are dropped before validation, and a rejected plan's
+ * problems are sent back, also to the next model in the chain, so it can fix them.
+ */
 @Component
 public class AiPlanGenerator implements PlanGenerator {
+
+    private static final Logger log = LoggerFactory.getLogger(AiPlanGenerator.class);
 
     private static final String SYSTEM_PROMPT = """
             You are a realistic, encouraging coach who turns a goal into a study/work plan.
@@ -18,25 +27,34 @@ public class AiPlanGenerator implements PlanGenerator {
             Follow the numeric targets in the request exactly. Dates use the format YYYY-MM-DD.
             """;
 
-    private final ChatClient chatClient;
+    private final AiChain chain;
+    private final AiProperties props;
+    private final PlanRepairer repairer;
+    private final PlanValidator validator;
 
-    public AiPlanGenerator(ChatClient.Builder builder) {
-        this.chatClient = builder.defaultSystem(SYSTEM_PROMPT)
-                // Logs prompts and responses at DEBUG: logging.level.org.springframework.ai.chat.client.advisor=DEBUG
-                .defaultAdvisors(new SimpleLoggerAdvisor())
-                .build();
+    public AiPlanGenerator(AiChain chain, AiProperties props, PlanRepairer repairer, PlanValidator validator) {
+        this.chain = chain;
+        this.props = props;
+        this.repairer = repairer;
+        this.validator = validator;
     }
 
     @Override
-    public GeneratedPlan generate(PlanRequest req, List<String> previousErrors) {
-        try {
-            return chatClient.prompt()
-                    .user(userPrompt(req, previousErrors))
-                    .call()
-                    .entity(GeneratedPlan.class);
-        } catch (RuntimeException e) {
-            throw new AiUnavailableException("AI provider failed to generate a plan", e);
-        }
+    public AiResult<GeneratedPlan> generate(PlanRequest req) {
+        return chain.call(new AiTask<>("generate a plan", props.planTimeout(), props.planBudget(),
+                (client, errors) -> {
+                    GeneratedPlan raw = client.prompt().system(SYSTEM_PROMPT).user(userPrompt(req, errors))
+                            .call().entity(GeneratedPlan.class);
+                    if (raw == null) {
+                        return null;
+                    }
+                    PlanRepairer.Repaired repaired = repairer.repair(raw, req);
+                    if (repaired.droppedTasks() > 0) {
+                        log.info("Dropped {} out-of-window tasks from an AI plan", repaired.droppedTasks());
+                    }
+                    return repaired.plan();
+                },
+                plan -> validator.validate(plan, req)));
     }
 
     private static String userPrompt(PlanRequest req, List<String> previousErrors) {

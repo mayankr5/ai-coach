@@ -3,7 +3,8 @@ spring:
     name: ai-coach
   config:
     # Local secrets (API keys) live in a git-ignored backend/.env file; real environment variables still win
-    import: optional:file:.env[.properties]
+    # Tests point AI_COACH_ENV_FILE elsewhere so they never depend on a developer's local settings
+    import: optional:file:${AI_COACH_ENV_FILE:.env}[.properties]
   autoconfigure:
     # Auth is JWT-based; skip Spring's default in-memory user and generated password
     exclude: org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration
@@ -19,35 +20,14 @@ spring:
     enabled: true
   ai:
     model:
-      # Which provider answers chat calls: ollama | anthropic | openai | google-genai
-      chat: ${AI_PROVIDER:ollama}
-      # Only chat is used; keep other model types off so unused providers need no keys
+      # Chat models are built by com.aicoach.ai.ChatModelFactory from app.ai.chain, not auto-configured
+      chat: none
       embedding: none
       image: none
       audio:
         speech: none
         transcription: none
       moderation: none
-    ollama:
-      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
-      chat:
-        options:
-          model: ${OLLAMA_MODEL:llama3}
-          temperature: 0.3
-    anthropic:
-      api-key: ${ANTHROPIC_API_KEY:}
-      chat:
-        options:
-          model: ${ANTHROPIC_MODEL:claude-sonnet-5-5}
-          temperature: 0.3
-    openai:
-      api-key: ${OPENAI_API_KEY:}
-    google:
-      genai:
-        api-key: ${GEMINI_API_KEY:}
-        chat:
-          options:
-            model: ${GEMINI_MODEL:gemini-3.6-flash}
 
 app:
   jwt:
@@ -59,6 +39,20 @@ app:
     task-window-days: 14
     # Hourly would also work; daily at 03:00 UTC covers every timezone's "yesterday" by then
     missed-day-cron: ${MISSED_DAY_CRON:0 0 3 * * *}
+  ai:
+    # Models tried in order until one gives a usable answer; each entry is provider/model.
+    # Providers: google-genai, ollama, anthropic, openai. Entries without an API key are skipped.
+    chain: ${AI_CHAIN:google-genai/gemini-3.6-flash,ollama/qwen2.5:7b}
+    # Longest wait for one answer, and for all attempts together (what the user waits at most)
+    plan-timeout: 60s
+    plan-budget: 90s
+    message-timeout: 20s
+    message-budget: 30s
+    temperature: 0.3
+    ollama-base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+    gemini-api-key: ${GEMINI_API_KEY:}
+    anthropic-api-key: ${ANTHROPIC_API_KEY:}
+    openai-api-key: ${OPENAI_API_KEY:}
   cors:
     allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
 
