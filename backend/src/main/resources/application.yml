@@ -1,6 +1,9 @@
 spring:
   application:
     name: ai-coach
+  config:
+    # Local secrets (API keys) live in a git-ignored backend/.env file; real environment variables still win
+    import: optional:file:.env[.properties]
   autoconfigure:
     # Auth is JWT-based; skip Spring's default in-memory user and generated password
     exclude: org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration
@@ -42,6 +45,9 @@ spring:
     google:
       genai:
         api-key: ${GEMINI_API_KEY:}
+        chat:
+          options:
+            model: ${GEMINI_MODEL:gemini-3.6-flash}
 
 app:
   jwt:

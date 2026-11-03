@@ -51,9 +51,16 @@ Plans are generated through Spring AI, so any supported model works. Pick one wi
 | Ollama (default, local, free) | `AI_PROVIDER=ollama`, `OLLAMA_MODEL=llama3` |
 | Anthropic | `AI_PROVIDER=anthropic`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` |
 | OpenAI | `AI_PROVIDER=openai`, `OPENAI_API_KEY` |
-| Gemini | `AI_PROVIDER=google-genai`, `GEMINI_API_KEY` |
+| Gemini | `AI_PROVIDER=google-genai`, `GEMINI_API_KEY`, `GEMINI_MODEL` (default `gemini-3.6-flash`) |
 
-After each check-in the AI proposes changes (move, resize, remove, add) to upcoming tasks. If it is down or its changes break the rules, a rule-based planner re-schedules missed work instead, so check-ins never fail. A nightly job (`MISSED_DAY_CRON`, default 03:00 UTC) marks overdue tasks as skipped for goals with no check-in and re-plans them without calling the AI.
+For local development, put these in `backend/.env` (git-ignored, loaded automatically), e.g.:
+
+```
+AI_PROVIDER=google-genai
+GEMINI_API_KEY=your-key
+```
+
+After each check-in, `CatchUpScheduler` (plain code) puts leftover work first on the next day and shifts later tasks forward in order, using the goal's `extraMinutesPerDay` on catch-up days. The AI only writes the coach message; if it is down, a fixed message is used, so check-ins never fail. A nightly job (`MISSED_DAY_CRON`, default 03:00 UTC) marks overdue tasks as skipped for goals with no check-in and re-plans them without calling the AI.
 
 Every plan is checked by `PlanValidator` (dates, daily minute limit, milestone order) whatever the model.
 

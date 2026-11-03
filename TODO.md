@@ -10,7 +10,7 @@ Small local models get the minute arithmetic wrong, so re-plans fell back to the
 and lost the personal coach message. New split: **code does all scheduling math, AI writes the words.**
 Tasks are treated as a series, so leftover work must come first, not land weeks later.
 
-- [ ] **Stage 1 — next day + shift forward**
+- [x] **Stage 1 — next day + shift forward**
   - Goal gets `extraMinutesPerDay` (user-set, capped at 50% of `minutesPerDay`)
   - Leftover goes on the next day as the first task if it fits in normal + extra time
   - Otherwise the following tasks shift forward in order, never over the limit
@@ -25,6 +25,22 @@ Tasks are treated as a series, so leftover work must come first, not land weeks 
 - [ ] **Stage 4 — pattern detection**
   - Missed ≥ 3 of the last 7 days → suggest a lighter plan
   - Repeatedly skipped heavy days → suggest lowering extra time
+
+## Known problems (found 2026-11-03)
+- [ ] **Order within a day:** tasks on the same day are listed by creation id, so a catch-up task shows
+      after that day's planned work (and the AI message describes it that way). Add a position field.
+- [ ] **Unreadable AI answers fail at once:** a plan with an impossible date ("2026-11-31") can't be parsed,
+      which is treated as "provider down" (502) with no retry. Retry once and tell the model what was wrong.
+- [ ] **No timeout on AI calls:** `gemini-3.8-flash` never answered and the request hung for minutes.
+      Set a read timeout so a slow provider fails fast (plan → 502, check-in → fixed message).
+- [ ] **Free tier limits:** Gemini free quota can be very low and changes without notice; when it runs out,
+      plan generation returns 502. Fine for personal testing, not for real users.
+- [ ] **Tests read the local `backend/.env`:** harmless today (AI is faked), but tests shouldn't depend on a
+      developer's local config. Ignore `.env` in tests.
+- [ ] **Extra-time streak only sees future days:** "max 2 extra days in a row" doesn't count catch-up days
+      already in the past.
+- [ ] **Small local models write inaccurate messages:** qwen 7B may describe changes that didn't happen.
+      Gemini is much better; consider checking that the message mentions only real changes.
 
 ## Later
 - [ ] Fill new days as the 14-day window moves (maybe covered by Stage 1 shifting; re-check after it)
