@@ -36,18 +36,20 @@ public class PlanService {
     private final PlanRevisionRepository revisions;
     private final PlanGenerator generator;
     private final PlanValidator validator;
+    private final PlanRepairer repairer;
     private final TransactionTemplate tx;
     private final EntityManager em;
     private final int taskWindowDays;
 
     public PlanService(GoalService goalService, TaskRepository tasks, PlanRevisionRepository revisions,
-                       PlanGenerator generator, PlanValidator validator, TransactionTemplate tx,
+                       PlanGenerator generator, PlanValidator validator, PlanRepairer repairer, TransactionTemplate tx,
                        EntityManager em, @Value("${app.planning.task-window-days}") int taskWindowDays) {
         this.goalService = goalService;
         this.tasks = tasks;
         this.revisions = revisions;
         this.generator = generator;
         this.validator = validator;
+        this.repairer = repairer;
         this.tx = tx;
         this.em = em;
         this.taskWindowDays = taskWindowDays;
@@ -63,7 +65,12 @@ public class PlanService {
         List<String> errors = List.of();
         GeneratedPlan plan = null;
         for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-            plan = generator.generate(request, errors);
+            PlanRepairer.Repaired repaired = repairer.repair(generator.generate(request, errors), request);
+            if (repaired.droppedTasks() > 0) {
+                log.info("Dropped {} out-of-window tasks from plan attempt {} for goal {}",
+                        repaired.droppedTasks(), attempt, goalId);
+            }
+            plan = repaired.plan();
             errors = validator.validate(plan, request);
             if (errors.isEmpty()) {
                 break;

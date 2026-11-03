@@ -2,7 +2,9 @@ package com.aicoach.replan;
 
 import com.aicoach.plan.AiUnavailableException;
 import com.aicoach.replan.RePlanRequest.TaskView;
+import com.aicoach.task.TaskStatus;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -14,6 +16,7 @@ public class AiRePlanner implements RePlanner {
     private static final String SYSTEM_PROMPT = """
             You are a realistic, encouraging coach adjusting a user's plan after their daily check-in.
             Return a short coachMessage (1-3 sentences, specific and honest, no generic praise) and a list of changes.
+            If the user wrote a note, the coachMessage must respond to it directly.
             Allowed actions:
             - MOVE: give taskId and a new date
             - RESIZE: give taskId and new minutes
@@ -23,7 +26,7 @@ public class AiRePlanner implements RePlanner {
             - Only change tasks listed under "Upcoming tasks"; never invent task ids.
             - All dates must be between the first and last allowed dates.
             - The total minutes on any date must not exceed the daily limit.
-            - Recover missed work: re-schedule skipped tasks, and add a shorter follow-up for partial ones.
+            - For every task under "Missed or partly done", ADD exactly one follow-up task as instructed there.
             - If the completion rate is low, make days lighter rather than piling work up.
             - Fill empty days up to the last allowed date with concrete tasks for the current milestone.
             - Change as little as needed. An empty list of changes is fine if the plan still works.
@@ -33,7 +36,10 @@ public class AiRePlanner implements RePlanner {
     private final ChatClient chatClient;
 
     public AiRePlanner(ChatClient.Builder builder) {
-        this.chatClient = builder.defaultSystem(SYSTEM_PROMPT).build();
+        this.chatClient = builder.defaultSystem(SYSTEM_PROMPT)
+                // Logs prompts and responses at DEBUG: logging.level.org.springframework.ai.chat.client.advisor=DEBUG
+                .defaultAdvisors(new SimpleLoggerAdvisor())
+                .build();
     }
 
     @Override
@@ -67,7 +73,11 @@ public class AiRePlanner implements RePlanner {
             sb.append("- none\n");
         }
         req.missed().forEach(t -> sb.append("- ").append(t.status()).append(": ").append(t.title())
-                .append(" (").append(t.minutes()).append(" min, was ").append(t.date()).append(")\n"));
+                .append(" (").append(t.minutes()).append(" min, was ").append(t.date()).append(") -> ADD ")
+                .append(t.status() == TaskStatus.PARTIAL
+                        ? "\"Finish: " + t.title() + "\" of about " + Math.max(5, t.minutes() / 2) + " min"
+                        : "\"" + t.title() + "\" of " + Math.min(t.minutes(), req.minutesPerDay()) + " min")
+                .append(" on a day with free time\n"));
         sb.append("\nUpcoming tasks:\n");
         if (req.upcoming().isEmpty()) {
             sb.append("- none\n");

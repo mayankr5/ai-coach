@@ -80,6 +80,20 @@ class ReplanValidatorTest {
     }
 
     @Test
+    void requiresFollowUpForEachMissedTask() {
+        RePlanRequest withMissed = new RePlanRequest(1L, "Learn Java", null, ExperienceLevel.BEGINNER, 60,
+                FROM.plusDays(60), FROM, FROM.plusDays(13), 0.5, "Maven kept failing", REQ.upcoming(),
+                List.of(new TaskView(5L, "Setup", FROM.minusDays(1), 40, 100L, TaskStatus.PARTIAL)),
+                REQ.milestones());
+
+        assertThat(validator.validate(withMissed, new PlanChanges("Keep going.", List.of())))
+                .anyMatch(e -> e.contains("1 missed tasks need a follow-up"));
+        assertThat(validator.validate(withMissed, new PlanChanges("Maven issues happen; finish setup Thursday.",
+                List.of(new TaskChange(Action.ADD, null, "Finish: Setup", FROM.plusDays(2), 20, 100L)))))
+                .isEmpty();
+    }
+
+    @Test
     void rejectsMissingCoachMessageOrAction() {
         List<String> errors = validator.validate(REQ, new PlanChanges(" ",
                 List.of(new TaskChange(null, 10L, null, null, null, null))));

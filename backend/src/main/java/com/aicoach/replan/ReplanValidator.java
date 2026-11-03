@@ -86,6 +86,13 @@ public class ReplanValidator {
             }
         }
 
+        // Missed work must never silently disappear: each missed task needs a follow-up ADD
+        long adds = list.stream().filter(c -> c.action() == PlanChanges.Action.ADD).count();
+        if (adds < req.missed().size()) {
+            errors.add(req.missed().size() + " missed tasks need a follow-up ADD each, but only " + adds
+                    + " tasks were added");
+        }
+
         Map<LocalDate, Integer> perDay = new TreeMap<>();
         dates.forEach((id, date) -> {
             if (!date.isBefore(req.from()) && !date.isAfter(req.windowEnd())) {
