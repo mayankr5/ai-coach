@@ -7,11 +7,8 @@ import com.aicoach.plan.GeneratedPlan.PlannedMilestone;
 import com.aicoach.plan.GeneratedPlan.PlannedTask;
 import com.aicoach.plan.PlanRevisionRepository;
 import com.aicoach.plan.RevisionSource;
-import com.aicoach.replan.FakeRePlanner;
+import com.aicoach.replan.FakeCoachWriter;
 import com.aicoach.replan.MissedDayJob;
-import com.aicoach.replan.PlanChanges;
-import com.aicoach.replan.PlanChanges.Action;
-import com.aicoach.replan.PlanChanges.TaskChange;
 import com.aicoach.task.Task;
 import com.aicoach.task.TaskRepository;
 import com.aicoach.task.TaskStatus;
@@ -57,8 +54,8 @@ class CheckInFlowTest {
 
         @Bean
         @Primary
-        FakeRePlanner fakeRePlanner() {
-            return new FakeRePlanner();
+        FakeCoachWriter fakeCoachWriter() {
+            return new FakeCoachWriter();
         }
     }
 
@@ -67,7 +64,7 @@ class CheckInFlowTest {
     @Autowired
     FakePlanGenerator planGenerator;
     @Autowired
-    FakeRePlanner rePlanner;
+    FakeCoachWriter coachWriter;
     @Autowired
     TaskRepository tasks;
     @Autowired
@@ -82,7 +79,7 @@ class CheckInFlowTest {
     @BeforeEach
     void setUp() throws Exception {
         planGenerator.reset();
-        rePlanner.reset();
+        coachWriter.reset();
         today = LocalDate.now(ZoneId.of(TZ));
 
         // One 40-minute task per day across the 14-day window
@@ -101,65 +98,66 @@ class CheckInFlowTest {
     }
 
     @Test
-    void checkInAppliesAiChangesAndStoresCoachMessage() throws Exception {
+    void checkInStoresAiCoachMessage() throws Exception {
         Task todayTask = taskOn(today);
         Task tomorrowTask = taskOn(today.plusDays(1));
-        rePlanner.willReturn(req -> new PlanChanges("Great start! Added a short review tomorrow.", List.of(
-                new TaskChange(Action.ADD, null, "Review today's notes", req.from(), 15, null))));
+        coachWriter.willReturn("Great start! Tomorrow continues with the next topic.");
 
         mvc.perform(post(checkIns()).header("Authorization", bearer(token))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body(today, todayTask.getId(), "DONE", "Felt easy")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.coachMessage").value("Great start! Added a short review tomorrow."))
-                .andExpect(jsonPath("$.replanSource").value("AI"))
-                .andExpect(jsonPath("$.upcomingTasks[?(@.title == 'Review today\\'s notes')]").exists());
+                .andExpect(jsonPath("$.coachMessage").value("Great start! Tomorrow continues with the next topic."))
+                .andExpect(jsonPath("$.replanSource").value("AI"));
 
-        assertThat(rePlanner.requests).hasSize(1);
-        var request = rePlanner.requests.getFirst();
+        assertThat(coachWriter.requests).hasSize(1);
+        var request = coachWriter.requests.getFirst();
         assertThat(request.from()).isEqualTo(today.plusDays(1));
         assertThat(request.note()).isEqualTo("Felt easy");
         assertThat(request.completionRate()).isEqualTo(1.0);
         assertThat(request.upcoming()).anyMatch(t -> t.id().equals(tomorrowTask.getId()));
         assertThat(request.upcoming()).noneMatch(t -> t.id().equals(todayTask.getId()));
+        assertThat(coachWriter.plans.getFirst().isEmpty()).as("nothing missed, nothing changed").isTrue();
+        assertThat(tasks.findById(tomorrowTask.getId()).orElseThrow().getScheduledDate()).isEqualTo(today.plusDays(1));
 
         mvc.perform(get(checkIns()).header("Authorization", bearer(token)))
                 .andExpect(jsonPath("$.content[0].note").value("Felt easy"))
-                .andExpect(jsonPath("$.content[0].coachMessage").value("Great start! Added a short review tomorrow."));
+                .andExpect(jsonPath("$.content[0].coachMessage").value("Great start! Tomorrow continues with the next topic."));
         assertThat(revisions.findAll()).anyMatch(r -> r.getSource() == RevisionSource.AI);
     }
 
     @Test
-    void invalidAiChangesFallBackToRules() throws Exception {
+    void skippedTaskGoesFirstTomorrowAndLaterTasksShift() throws Exception {
         Task todayTask = taskOn(today);
-        PlanChanges bad = new PlanChanges("x", List.of(new TaskChange(Action.REMOVE, 999_999L, null, null, null, null)));
-        rePlanner.willReturn(req -> bad);
-        rePlanner.willReturn(req -> bad);
+        Task tomorrowTask = taskOn(today.plusDays(1));
+        coachWriter.willReturn("Redo it tomorrow; everything else moves back a day.");
 
+        // Every day has 40 of 60 minutes and no extra time, so the 40-minute redo pushes each day back one
         mvc.perform(post(checkIns()).header("Authorization", bearer(token))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(body(today, todayTask.getId(), "SKIPPED", null)))
+                        .content(body(today, todayTask.getId(), "SKIPPED", "Busy day")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.replanSource").value("FALLBACK"))
-                .andExpect(jsonPath("$.coachMessage").value("Moved 1 unfinished task to the next days with free time."));
+                .andExpect(jsonPath("$.replanSource").value("AI"));
 
-        assertThat(rePlanner.receivedErrors.get(1)).anyMatch(e -> e.contains("999999"));
-        // Every day already has 40 of 60 minutes, so the 40-minute redo can't fit in the window
-        assertThat(pendingTitled(todayTask.getTitle())).hasSize(1)
-                .allMatch(t -> t.getScheduledDate().isAfter(today.plusDays(13)));
+        assertThat(pendingTitled(todayTask.getTitle())).singleElement()
+                .satisfies(t -> assertThat(t.getScheduledDate()).isEqualTo(today.plusDays(1)));
+        assertThat(tasks.findById(tomorrowTask.getId()).orElseThrow().getScheduledDate()).isEqualTo(today.plusDays(2));
+        assertThat(coachWriter.plans.getFirst().shifted()).isEqualTo(13);
     }
 
     @Test
-    void aiDownStillSavesCheckIn() throws Exception {
+    void aiDownStillSavesCheckInWithDefaultMessage() throws Exception {
         Task todayTask = taskOn(today);
 
+        // 20-minute leftover + 40 planned fits in 60, so nothing else moves
         mvc.perform(post(checkIns()).header("Authorization", bearer(token))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body(today, todayTask.getId(), "PARTIAL", "Ran out of time")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.replanSource").value("FALLBACK"))
-                .andExpect(jsonPath("$.upcomingTasks[?(@.title == 'Finish: " + todayTask.getTitle() + "')].estimatedMinutes")
-                        .value(20));
+                .andExpect(jsonPath("$.coachMessage").value("Added 1 catch-up task starting " + today.plusDays(1) + "."))
+                .andExpect(jsonPath("$.upcomingTasks[?(@.title == 'Finish: " + todayTask.getTitle() + "')].scheduledDate")
+                        .value(today.plusDays(1).toString()));
     }
 
     @Test
@@ -193,7 +191,7 @@ class CheckInFlowTest {
         mvc.perform(post(checkIns()).header("Authorization", bearer(stranger))
                         .contentType(MediaType.APPLICATION_JSON).content(body(today, todayTask.getId(), "DONE", null)))
                 .andExpect(status().isNotFound());
-        assertThat(rePlanner.requests).isEmpty();
+        assertThat(coachWriter.requests).isEmpty();
     }
 
     @Test
@@ -225,7 +223,7 @@ class CheckInFlowTest {
         assertThat(pendingTitled(overdue.getTitle())).hasSize(1)
                 .allMatch(t -> !t.getScheduledDate().isBefore(today));
         assertThat(revisions.findAll()).anyMatch(r -> r.getSource() == RevisionSource.NIGHTLY);
-        assertThat(rePlanner.requests).as("nightly job never calls the AI").isEmpty();
+        assertThat(coachWriter.requests).as("nightly job never calls the AI").isEmpty();
 
         // Running again finds nothing new to carry
         missedDayJob.run();

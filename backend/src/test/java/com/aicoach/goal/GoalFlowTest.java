@@ -93,6 +93,26 @@ class GoalFlowTest {
     }
 
     @Test
+    void extraMinutesDefaultToZeroAndAreCappedAtHalf() throws Exception {
+        String token = registerUser(null);
+        long goalId = createGoal(token, "Learn Docker");
+        mvc.perform(get("/api/v1/goals/" + goalId).header("Authorization", bearer(token)))
+                .andExpect(jsonPath("$.extraMinutesPerDay").value(0));
+
+        mvc.perform(patch("/api/v1/goals/" + goalId).header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"extraMinutesPerDay\":30}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.extraMinutesPerDay").value(30));
+        mvc.perform(patch("/api/v1/goals/" + goalId).header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"extraMinutesPerDay\":31}"))
+                .andExpect(status().isBadRequest());
+        // Lowering daily time below twice the extra time is rejected too
+        mvc.perform(patch("/api/v1/goals/" + goalId).header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"minutesPerDay\":40}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void unknownTimezoneIs400() throws Exception {
         mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
                         .content("""

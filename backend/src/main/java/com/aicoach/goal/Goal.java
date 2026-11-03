@@ -37,6 +37,10 @@ public class Goal {
     @Column(name = "minutes_per_day", nullable = false)
     private int minutesPerDay;
 
+    /** Allowed on top of minutesPerDay on catch-up days only; the plan itself never uses it. */
+    @Column(name = "extra_minutes_per_day", nullable = false)
+    private int extraMinutesPerDay;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "experience_level", nullable = false)
     private ExperienceLevel experienceLevel;

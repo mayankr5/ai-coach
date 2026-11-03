@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -28,33 +29,31 @@ import java.util.stream.Collectors;
 
 /**
  * Adjusts a goal's upcoming tasks. Callers must already have checked ownership.
- * Like plan generation, the AI call runs between two short transactions.
+ * Code does all scheduling ({@link CatchUpScheduler}); the AI only writes the coach message, so a
+ * failing or weak model never changes what gets scheduled. The AI call runs between two short transactions.
  */
 @Service
 public class ReplanService {
 
     private static final Logger log = LoggerFactory.getLogger(ReplanService.class);
-    static final int MAX_ATTEMPTS = 2;
     static final int COMPLETION_LOOKBACK_DAYS = 14;
 
     private final GoalRepository goals;
     private final TaskRepository tasks;
     private final PlanRevisionRepository revisions;
-    private final RePlanner aiRePlanner;
-    private final RuleBasedRePlanner ruleBased;
-    private final ReplanValidator validator;
+    private final CatchUpScheduler scheduler;
+    private final CoachWriter coachWriter;
     private final TransactionTemplate tx;
     private final int taskWindowDays;
 
     public ReplanService(GoalRepository goals, TaskRepository tasks, PlanRevisionRepository revisions,
-                         RePlanner aiRePlanner, RuleBasedRePlanner ruleBased, ReplanValidator validator,
-                         TransactionTemplate tx, @Value("${app.planning.task-window-days}") int taskWindowDays) {
+                         CatchUpScheduler scheduler, CoachWriter coachWriter, TransactionTemplate tx,
+                         @Value("${app.planning.task-window-days}") int taskWindowDays) {
         this.goals = goals;
         this.tasks = tasks;
         this.revisions = revisions;
-        this.aiRePlanner = aiRePlanner;
-        this.ruleBased = ruleBased;
-        this.validator = validator;
+        this.scheduler = scheduler;
+        this.coachWriter = coachWriter;
         this.tx = tx;
         this.taskWindowDays = taskWindowDays;
     }
@@ -64,46 +63,55 @@ public class ReplanService {
 
     /**
      * @param from  first date the re-plan may change
-     * @param useAi false for the rule-based planner only (nightly job: no AI cost per user)
+     * @param useAi false for the fixed message only (nightly job: no AI cost per user)
      */
     public ReplanResult replan(Long goalId, LocalDate from, String note, boolean useAi) {
         RePlanRequest request = tx.execute(status -> buildRequest(findGoal(goalId), from, note));
+        CatchUpPlan plan = scheduler.schedule(request);
 
-        PlanChanges changes = null;
+        String message = null;
         RevisionSource source = useAi ? RevisionSource.AI : RevisionSource.NIGHTLY;
         if (useAi) {
-            changes = tryAi(request);
-            if (changes == null) {
+            try {
+                message = coachWriter.write(request, plan);
+            } catch (AiUnavailableException e) {
+                log.warn("AI coach message unavailable for goal {}, using default: {}", goalId, e.getMessage());
                 source = RevisionSource.FALLBACK;
             }
         }
-        if (changes == null) {
-            changes = ruleBased.replan(request);
+        if (message == null) {
+            message = defaultMessage(plan);
         }
 
-        PlanChanges finalChanges = changes;
+        PlanChanges changes = new PlanChanges(message, plan.changes());
         RevisionSource finalSource = source;
-        tx.executeWithoutResult(status -> apply(findGoal(goalId), request, finalChanges, finalSource));
-        return new ReplanResult(changes.coachMessage().strip(), source);
+        tx.executeWithoutResult(status -> apply(findGoal(goalId), request, changes, finalSource));
+        return new ReplanResult(message, source);
     }
 
-    private PlanChanges tryAi(RePlanRequest request) {
-        List<String> errors = List.of();
-        for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-            PlanChanges proposed;
-            try {
-                proposed = aiRePlanner.replan(request, errors);
-            } catch (AiUnavailableException e) {
-                log.warn("AI re-plan unavailable for goal {}, using fallback: {}", request.goalId(), e.getMessage());
-                return null;
-            }
-            errors = validator.validate(request, proposed);
-            if (errors.isEmpty()) {
-                return proposed;
-            }
-            log.warn("Re-plan attempt {} for goal {} rejected: {}", attempt, request.goalId(), errors);
+    static String defaultMessage(CatchUpPlan plan) {
+        if (plan.isEmpty()) {
+            return "Nothing to catch up on. Keep going with the plan.";
         }
-        return null;
+        List<String> parts = new ArrayList<>();
+        int added = plan.followUps().size();
+        if (added > 0) {
+            parts.add("Added " + added + (added == 1 ? " catch-up task" : " catch-up tasks") + " starting "
+                    + plan.followUps().getFirst().date() + ".");
+        }
+        if (plan.shifted() > 0) {
+            parts.add("Moved " + plan.shifted() + (plan.shifted() == 1 ? " later task" : " later tasks")
+                    + " forward to keep the order.");
+        }
+        if (!plan.extraDays().isEmpty()) {
+            parts.add("Using your extra time on " + plan.extraDays().stream().map(LocalDate::toString)
+                    .collect(Collectors.joining(", ")) + ".");
+        }
+        if (plan.overflow() > 0) {
+            parts.add(plan.overflow() + (plan.overflow() == 1 ? " task doesn't" : " tasks don't")
+                    + " fit before the deadline; consider extending it or adding daily time.");
+        }
+        return String.join(" ", parts);
     }
 
     private RePlanRequest buildRequest(Goal goal, LocalDate from, String note) {
@@ -117,7 +125,7 @@ public class ReplanService {
                 .map(m -> new MilestoneView(m.getId(), m.getTitle(), m.getTargetDate())).toList();
 
         return new RePlanRequest(goal.getId(), goal.getTitle(), goal.getDescription(), goal.getExperienceLevel(),
-                goal.getMinutesPerDay(), goal.getDeadline(), from, windowEnd,
+                goal.getMinutesPerDay(), goal.getExtraMinutesPerDay(), goal.getDeadline(), from, windowEnd,
                 completionRate(goal.getId(), from), note, upcoming, missed, milestones);
     }
 
@@ -177,7 +185,7 @@ public class ReplanService {
         PlanRevision revision = new PlanRevision();
         revision.setGoal(goal);
         revision.setSource(source);
-        revision.setSummary(changes.coachMessage().strip());
+        revision.setSummary(changes.coachMessage());
         revisions.save(revision);
     }
 

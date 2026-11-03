@@ -16,6 +16,8 @@ public final class GoalDtos {
             @Size(max = 2000) String description,
             @NotNull @Future LocalDate deadline,
             @NotNull @Min(10) @Max(600) Integer minutesPerDay,
+            /** Optional, defaults to 0; at most half of minutesPerDay. */
+            @Min(0) Integer extraMinutesPerDay,
             @NotNull ExperienceLevel experienceLevel) {
     }
 
@@ -25,6 +27,7 @@ public final class GoalDtos {
             @Size(max = 2000) String description,
             @Future LocalDate deadline,
             @Min(10) @Max(600) Integer minutesPerDay,
+            @Min(0) Integer extraMinutesPerDay,
             ExperienceLevel experienceLevel,
             GoalStatus status) {
     }
@@ -43,11 +46,11 @@ public final class GoalDtos {
 
     public record GoalResponse(
             Long id, String title, String description, LocalDate deadline, int minutesPerDay,
-            ExperienceLevel experienceLevel, GoalStatus status, Instant createdAt,
+            int extraMinutesPerDay, ExperienceLevel experienceLevel, GoalStatus status, Instant createdAt,
             List<MilestoneResponse> milestones) {
         static GoalResponse from(Goal g) {
             return new GoalResponse(g.getId(), g.getTitle(), g.getDescription(), g.getDeadline(),
-                    g.getMinutesPerDay(), g.getExperienceLevel(), g.getStatus(), g.getCreatedAt(),
+                    g.getMinutesPerDay(), g.getExtraMinutesPerDay(), g.getExperienceLevel(), g.getStatus(), g.getCreatedAt(),
                     g.getMilestones().stream().map(MilestoneResponse::from).toList());
         }
     }

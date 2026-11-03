@@ -9,6 +9,7 @@ import java.util.List;
 /**
  * Snapshot of a goal for re-planning.
  *
+ * @param extraMinutesPerDay allowed on top of minutesPerDay on catch-up days
  * @param from           first date that may be changed; earlier days are history
  * @param windowEnd      last date tasks may be scheduled on
  * @param completionRate share of planned minutes actually done over the last two weeks, null if no data
@@ -16,7 +17,7 @@ import java.util.List;
  * @param missed         skipped or partial tasks not yet carried forward
  */
 public record RePlanRequest(Long goalId, String title, String description, ExperienceLevel experienceLevel,
-                            int minutesPerDay, LocalDate deadline, LocalDate from, LocalDate windowEnd,
+                            int minutesPerDay, int extraMinutesPerDay, LocalDate deadline, LocalDate from, LocalDate windowEnd,
                             Double completionRate, String note, List<TaskView> upcoming, List<TaskView> missed,
                             List<MilestoneView> milestones) {
 
