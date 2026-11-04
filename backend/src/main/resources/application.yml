@@ -54,7 +54,7 @@ app:
     anthropic-api-key: ${ANTHROPIC_API_KEY:}
     openai-api-key: ${OPENAI_API_KEY:}
   cors:
-    allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
+    allowed-origins: ${CORS_ORIGINS:http://localhost:5173,http://localhost:8081}
 
 management:
   endpoints:

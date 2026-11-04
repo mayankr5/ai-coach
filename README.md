@@ -9,7 +9,7 @@ A to-do app where an AI coach turns a goal into a realistic plan and adjusts it 
 ai-coach/
 ├── backend/   # Spring Boot 4 REST API (Java 21)
 ├── web/       # React + TypeScript (Vite, Tailwind, TanStack Query); see web/README.md
-└── mobile/    # Expo / React Native (later)
+└── mobile/    # Expo (React Native) for iOS and Android; see mobile/README.md
 ```
 
 ## Run the backend
@@ -28,6 +28,12 @@ Tests use Testcontainers, so Docker must be running: `cd backend && ./mvnw test`
 
 ```bash
 cd web && npm install && npm run dev   # http://localhost:5173, needs the backend running
+```
+
+## Run the mobile app
+
+```bash
+cd mobile && npm install && npx expo start   # scan the QR code with Expo Go; needs the backend running
 ```
 
 ## API (v1)

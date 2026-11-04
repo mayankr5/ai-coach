@@ -31,6 +31,15 @@ Tasks are treated as a series, so leftover work must come first, not land weeks 
   - Missed ≥ 3 of the last 7 days → suggest a lighter plan
   - Repeatedly skipped heavy days → suggest lowering extra time
 
+## Mobile app (Expo, iOS + Android; started 2026-11-05)
+- [x] Setup and login: Expo SDK 58 in `mobile/`, generated API types, token refresh, refresh token in secure storage
+- [ ] Goals list and creating a goal
+- [ ] Goal screen: coach message, today's check-in, next 7 days, progress; last data shown offline
+- [ ] Generate a plan, "Get back on track"
+- [ ] Daily check-in reminder (local notification)
+- [ ] CI workflow and README
+- [ ] Later: store builds (EAS), server push, minimum app version check
+
 ## Known problems (found 2026-11-03)
 - [x] **Order within a day:** tasks on the same day were listed by creation id, so a catch-up task showed
       after that day's planned work, and later re-plans queued it behind them. Tasks now carry a series
