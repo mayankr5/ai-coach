@@ -1,5 +1,6 @@
 package com.aicoach.checkin;
 
+import com.aicoach.common.MaybeNull;
 import com.aicoach.plan.RevisionSource;
 import com.aicoach.task.TaskDtos.TaskResponse;
 import com.aicoach.task.TaskStatus;
@@ -25,11 +26,12 @@ public final class CheckInDtos {
     public record TaskResult(@NotNull Long taskId, @NotNull TaskStatus status) {
     }
 
-    public record CheckInResponse(Long id, LocalDate date, String note, String coachMessage,
+    public record CheckInResponse(Long id, LocalDate date, @MaybeNull String note, String coachMessage,
                                   RevisionSource replanSource, List<TaskResponse> upcomingTasks) {
     }
 
-    public record CheckInSummary(Long id, LocalDate date, String note, String coachMessage, Instant updatedAt) {
+    public record CheckInSummary(Long id, LocalDate date, @MaybeNull String note, @MaybeNull String coachMessage,
+                                 Instant updatedAt) {
         static CheckInSummary from(CheckIn c) {
             return new CheckInSummary(c.getId(), c.getCheckInDate(), c.getNote(), c.getCoachMessage(), c.getUpdatedAt());
         }
@@ -46,7 +48,8 @@ public final class CheckInDtos {
      * @param daysBehind     minutesBehind in whole days of normal time
      */
     public record ProgressResponse(Long goalId, int totalTasks, int doneTasks, int partialTasks, int skippedTasks,
-                                   int percentComplete, Double completionRate, NextMilestone nextMilestone,
+                                   int percentComplete, @MaybeNull Double completionRate,
+                                   @MaybeNull NextMilestone nextMilestone,
                                    int healthPercent, int minutesBehind, int daysBehind, boolean onTrack) {
     }
 }

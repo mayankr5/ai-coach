@@ -1,5 +1,6 @@
 package com.aicoach.task;
 
+import com.aicoach.common.MaybeNull;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
@@ -19,7 +20,7 @@ public final class TaskDtos {
             TaskStatus status) {
     }
 
-    public record TaskResponse(Long id, Long goalId, Long milestoneId, String title,
+    public record TaskResponse(Long id, Long goalId, @MaybeNull Long milestoneId, String title,
                                LocalDate scheduledDate, int estimatedMinutes, TaskStatus status, int sequence) {
         public static TaskResponse from(Task t) {
             return new TaskResponse(t.getId(), t.getGoal().getId(),

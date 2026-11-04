@@ -7,7 +7,7 @@ A to-do app where an AI coach turns a goal into a realistic plan and adjusts it 
 ```
 ai-coach/
 ├── backend/   # Spring Boot 4 REST API (Java 21)
-├── web/       # React + TypeScript (coming next)
+├── web/       # React + TypeScript (Vite, Tailwind, TanStack Query); see web/README.md
 └── mobile/    # Expo / React Native (later)
 ```
 
@@ -22,6 +22,12 @@ cd backend && ./mvnw spring-boot:run
 - Health:   http://localhost:8080/actuator/health
 
 Tests use Testcontainers, so Docker must be running: `cd backend && ./mvnw test`. GitHub Actions runs them on every push to `main` and every pull request that touches `backend/`.
+
+## Run the web app
+
+```bash
+cd web && npm install && npm run dev   # http://localhost:5173, needs the backend running
+```
 
 ## API (v1)
 

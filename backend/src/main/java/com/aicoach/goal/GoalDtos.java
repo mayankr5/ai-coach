@@ -1,5 +1,6 @@
 package com.aicoach.goal;
 
+import com.aicoach.common.MaybeNull;
 import jakarta.validation.constraints.*;
 
 import java.time.DayOfWeek;
@@ -49,8 +50,8 @@ public final class GoalDtos {
     }
 
     public record GoalResponse(
-            Long id, String title, String description, LocalDate deadline, int minutesPerDay,
-            int extraMinutesPerDay, DayOfWeek bufferDay, ExperienceLevel experienceLevel, GoalStatus status,
+            Long id, String title, @MaybeNull String description, LocalDate deadline, int minutesPerDay,
+            int extraMinutesPerDay, @MaybeNull DayOfWeek bufferDay, ExperienceLevel experienceLevel, GoalStatus status,
             Instant createdAt, List<MilestoneResponse> milestones) {
         static GoalResponse from(Goal g) {
             return new GoalResponse(g.getId(), g.getTitle(), g.getDescription(), g.getDeadline(),
