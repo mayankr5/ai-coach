@@ -23,7 +23,8 @@ Tasks are treated as a series, so leftover work must come first, not land weeks 
 - [ ] **Stage 3 — plan no longer fits (health < 100%)**
   - [x] `GET /adjustments` previews; extend moves the milestone, later ones and the deadline; more time picks the
         smallest daily time at which a re-pack fits the milestone's tasks, then re-packs from tomorrow
-  - [ ] Cut scope: AI suggests tasks to drop with reasons, user confirms, code re-packs
+  - [x] Cut scope: AI ranks upcoming tasks by how safely they can go (with reasons), code takes them in order
+        until enough time is freed, the user confirms, code drops them and re-packs
   - [ ] Web: "Get back on track" panel
   - [ ] Later: start a fresh plan from tomorrow
 - [ ] **Stage 4 — pattern detection**

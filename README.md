@@ -55,6 +55,8 @@ cd web && npm install && npm run dev   # http://localhost:5173, needs the backen
 | GET  | `/api/v1/goals/{id}/adjustments` (how far behind the next milestone, and what each fix would change) | Bearer token |
 | POST | `/api/v1/goals/{id}/adjustments/extend` `{days}` (move the milestone, later ones and the deadline) | Bearer token |
 | POST | `/api/v1/goals/{id}/adjustments/more-time` `{minutesPerDay}` (raise daily time, re-pack upcoming tasks) | Bearer token |
+| POST | `/api/v1/goals/{id}/adjustments/cut-scope/suggest` (AI suggests upcoming tasks to drop, with reasons) | Bearer token |
+| POST | `/api/v1/goals/{id}/adjustments/cut-scope` `{taskIds}` (drop the confirmed tasks, re-pack the rest) | Bearer token |
 
 ## AI models
 

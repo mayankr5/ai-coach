@@ -1,6 +1,8 @@
 package com.aicoach.adjust;
 
 import com.aicoach.adjust.AdjustmentDtos.AdjustmentOptions;
+import com.aicoach.adjust.AdjustmentDtos.CutScopeRequest;
+import com.aicoach.adjust.AdjustmentDtos.CutSuggestion;
 import com.aicoach.adjust.AdjustmentDtos.ExtendRequest;
 import com.aicoach.adjust.AdjustmentDtos.MoreTimeRequest;
 import com.aicoach.security.AuthUser;
@@ -28,6 +30,18 @@ public class AdjustmentController {
     public AdjustmentOptions extend(@AuthenticationPrincipal AuthUser user, @PathVariable Long goalId,
                                     @Valid @RequestBody ExtendRequest req) {
         return adjustments.extend(user.id(), goalId, req.days());
+    }
+
+    /** Asks the AI which upcoming tasks could go; nothing changes until {@code POST /cut-scope}. */
+    @PostMapping("/cut-scope/suggest")
+    public CutSuggestion suggestCut(@AuthenticationPrincipal AuthUser user, @PathVariable Long goalId) {
+        return adjustments.suggestCut(user.id(), goalId);
+    }
+
+    @PostMapping("/cut-scope")
+    public AdjustmentOptions cut(@AuthenticationPrincipal AuthUser user, @PathVariable Long goalId,
+                                 @Valid @RequestBody CutScopeRequest req) {
+        return adjustments.cut(user.id(), goalId, req.taskIds());
     }
 
     @PostMapping("/more-time")

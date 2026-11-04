@@ -4,9 +4,12 @@ import com.aicoach.checkin.CheckInDtos.NextMilestone;
 import com.aicoach.common.MaybeNull;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public final class AdjustmentDtos {
 
@@ -31,6 +34,17 @@ public final class AdjustmentDtos {
      * @param realistic false when it's more than half as much again as the current daily time
      */
     public record MoreTimeOption(int minutesPerDay, int currentMinutesPerDay, boolean realistic) {
+    }
+
+    /** The AI's picks to drop, for the user to confirm; {@code minutesFreed} if all of them go. */
+    public record CutSuggestion(int minutesBehind, int minutesFreed, List<SuggestedCut> tasks) {
+    }
+
+    public record SuggestedCut(long taskId, String title, int minutes, LocalDate scheduledDate, String reason) {
+    }
+
+    /** The tasks the user chose to drop; any upcoming pending tasks, not only the suggested ones. */
+    public record CutScopeRequest(@NotEmpty @Size(max = 50) List<@NotNull Long> taskIds) {
     }
 
     public record ExtendRequest(@NotNull @Min(1) @Max(365) Integer days) {

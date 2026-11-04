@@ -57,12 +57,20 @@ class AdjustmentFlowTest {
         FakeWeekPlanner fakeWeekPlanner() {
             return new FakeWeekPlanner();
         }
+
+        @Bean
+        @Primary
+        FakeScopeCutter fakeScopeCutter() {
+            return new FakeScopeCutter();
+        }
     }
 
     @Autowired
     MockMvc mvc;
     @Autowired
     FakePlanGenerator planGenerator;
+    @Autowired
+    FakeScopeCutter scopeCutter;
     @Autowired
     TaskRepository tasks;
     @Autowired
@@ -92,6 +100,7 @@ class AdjustmentFlowTest {
     @BeforeEach
     void setUp() throws Exception {
         planGenerator.reset();
+        scopeCutter.reset();
         today = LocalDate.now(ZoneOffset.UTC);
         token = register(mvc, "UTC");
         goalId = createGoal(mvc, token, ZoneOffset.UTC);
@@ -148,6 +157,51 @@ class AdjustmentFlowTest {
         assertThat(perDay).containsExactly(Map.entry(today, 1L), Map.entry(today.plusDays(1), 2L),
                 Map.entry(today.plusDays(2), 2L), Map.entry(today.plusDays(3), 1L));
         assertThat(goals.findById(goalId).orElseThrow().getMinutesPerDay()).isEqualTo(120);
+    }
+
+    @Test
+    void cutScopeSuggestsThenDropsOnlyWhatTheUserConfirms() throws Exception {
+        // Upcoming lessons 1 to 5 are the candidates; the "AI" ranks three, two of which free the 120 minutes
+        scopeCutter.answerWith(req -> new ScopeSuggestion(List.of(new ScopeSuggestion.Drop(4, "Optional practice"),
+                new ScopeSuggestion.Drop(5, "Covered again later"), new ScopeSuggestion.Drop(1, "Revision only"))));
+
+        String body = post(adjustments() + "/cut-scope/suggest", "")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.minutesBehind").value(120))
+                .andExpect(jsonPath("$.minutesFreed").value(120))
+                .andExpect(jsonPath("$.tasks[0].title").value("Lesson 4"))
+                .andExpect(jsonPath("$.tasks[0].reason").value("Optional practice"))
+                .andExpect(jsonPath("$.tasks.length()").value(2))
+                .andReturn().getResponse().getContentAsString();
+        CutRequest asked = scopeCutter.requests.getFirst();
+        assertThat(asked.minutesToFree()).isEqualTo(120);
+        assertThat(asked.candidates()).extracting(CutRequest.Candidate::title)
+                .containsExactly("Lesson 1", "Lesson 2", "Lesson 3", "Lesson 4", "Lesson 5");
+        assertThat(tasks.findByGoalId(goalId)).hasSize(6);
+
+        List<Integer> ids = com.jayway.jsonpath.JsonPath.read(body, "$.tasks[*].taskId");
+        post(adjustments() + "/cut-scope", "{\"taskIds\":" + ids + "}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.minutesBehind").value(0));
+
+        assertThat(tasks.findByGoalId(goalId)).extracting(t -> t.getTitle())
+                .containsExactlyInAnyOrder("Lesson 0", "Lesson 1", "Lesson 2", "Lesson 3");
+        assertThat(revisions.findAll()).anyMatch(r -> r.getSource() == RevisionSource.ADJUSTED
+                && r.getSummary().equals("Dropped 2 tasks (120 min): Lesson 4; Lesson 5"));
+        // On track again, so there is nothing more to cut
+        post(adjustments() + "/cut-scope/suggest", "").andExpect(status().isConflict());
+    }
+
+    @Test
+    void onlyUpcomingPendingTasksCanBeDropped() throws Exception {
+        long todaysTask = tasks.findByGoalId(goalId).stream()
+                .filter(t -> t.getScheduledDate().equals(today)).findFirst().orElseThrow().getId();
+
+        post(adjustments() + "/cut-scope", "{\"taskIds\":[" + todaysTask + "]}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.containsString("can't be dropped")));
+        post(adjustments() + "/cut-scope", "{\"taskIds\":[999999]}").andExpect(status().isBadRequest());
+        assertThat(tasks.findByGoalId(goalId)).hasSize(6);
     }
 
     @Test
