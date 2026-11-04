@@ -26,7 +26,7 @@ export default function LoginScreen() {
   }
 
   return (
-    <Screen>
+    <Screen edges={['top', 'bottom']}>
       <View style={styles.container}>
         <Text style={styles.brand}>AI COACH</Text>
         <Text style={styles.title}>Log in</Text>

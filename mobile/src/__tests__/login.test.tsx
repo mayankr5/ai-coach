@@ -4,11 +4,6 @@ import LoginScreen from '../app/login'
 import { useAuth } from '../auth/useAuth'
 import { json, mockApi, pathOf, renderScreen } from '../test/render'
 
-jest.mock('expo-router', () => {
-  const { Text } = jest.requireActual('react-native')
-  return { Link: ({ children }: { children: React.ReactNode }) => <Text>{children}</Text> }
-})
-
 const asha = { id: 1, email: 'a@example.com', displayName: 'Asha', timezone: 'Asia/Kolkata' }
 const pair = { accessToken: 'access', refreshToken: 'refresh', expiresInSeconds: 900 }
 

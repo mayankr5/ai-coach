@@ -1,8 +1,9 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Stack } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
 import { StatusBar } from 'expo-status-bar'
 import { useEffect } from 'react'
+import { AppState, Platform } from 'react-native'
 import { AuthProvider } from '../auth/AuthProvider'
 import { useAuth } from '../auth/useAuth'
 import { colors } from '../theme'
@@ -10,6 +11,11 @@ import { colors } from '../theme'
 SplashScreen.preventAutoHideAsync()
 
 const queryClient = new QueryClient()
+
+// Coming back to the app counts as focus, so stale data (e.g. yesterday's tasks) refetches
+if (Platform.OS !== 'web') {
+  AppState.addEventListener('change', state => focusManager.setFocused(state === 'active'))
+}
 
 export default function RootLayout() {
   return (
@@ -39,7 +45,9 @@ function Routes() {
       contentStyle: { backgroundColor: colors.background },
     }}>
       <Stack.Protected guard={user !== null}>
-        <Stack.Screen name="index" options={{ title: 'AI Coach' }} />
+        <Stack.Screen name="index" options={{ title: 'Your goals' }} />
+        <Stack.Screen name="goals/new" options={{ presentation: 'modal', title: 'New goal' }} />
+        <Stack.Screen name="goals/[id]" options={{ title: 'Goal', headerBackTitle: 'Goals' }} />
       </Stack.Protected>
       <Stack.Protected guard={user === null}>
         <Stack.Screen name="login" options={{ headerShown: false }} />

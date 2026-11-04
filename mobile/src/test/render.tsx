@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render } from '@testing-library/react-native'
 import type { ReactElement } from 'react'
+import { tokens } from '../api/tokens'
 import { AuthProvider } from '../auth/AuthProvider'
 
 /** Renders {@code screen} with a fresh query cache and the auth provider, as the app's root layout does. */
@@ -25,3 +26,17 @@ export function mockApi(respond: (request: Request) => Response | Promise<Respon
 }
 
 export const pathOf = (request: Request) => new URL(request.url).pathname
+
+export const asha = { id: 1, email: 'a@example.com', displayName: 'Asha', timezone: 'Asia/Kolkata' }
+
+/** Starts with a saved session for Asha; other requests go to {@code respond}. */
+export async function loggedIn(respond: (request: Request) => Response | Promise<Response>) {
+  await tokens.save({ accessToken: 'access', refreshToken: 'refresh' })
+  return mockApi(request => {
+    if (pathOf(request) === '/api/v1/auth/refresh') {
+      return json({ accessToken: 'access', refreshToken: 'refresh', expiresInSeconds: 900 })
+    }
+    if (pathOf(request) === '/api/v1/users/me') return json(asha)
+    return respond(request)
+  })
+}
