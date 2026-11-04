@@ -1,7 +1,20 @@
 # AI Coach: mobile app
 
-Expo (React Native) app for iOS and Android. It talks to the same backend as the web app but shares no code
-with it: both generate their API types from the backend's OpenAPI spec.
+Expo (React Native, SDK 58) app for iOS and Android. It talks to the same backend as the web app but shares no
+code with it: both generate their API types from the backend's OpenAPI spec.
+
+## What it does
+
+- **Goals:** Active / Completed / Archived, pull to refresh; new goal with the phone's date picker and
+  tap-to-choose fields.
+- **Goal screen:** generate a plan, the coach's last reply, today's check-in (every task marked, haptic
+  feedback), the next 7 days, progress and milestones.
+- **Get back on track** (while behind): move the dates or add daily time (confirmed in a system dialog), or drop
+  tasks the coach suggests (a sheet to untick and confirm).
+- **Daily reminder** (Settings): a local notification at a chosen time, planned 7 days ahead and skipped once
+  every goal is checked in; tapping it opens the goal.
+- **Offline:** the last data loaded stays visible with an "Offline · showing data from …" note, and a saved
+  session survives an offline start. Checking in needs a connection.
 
 ## Run it
 
@@ -25,7 +38,20 @@ EXPO_PUBLIC_API_URL=http://192.168.1.20:8080
 ```
 
 If the phone shows "Can't reach the server", check that both devices are on the same network and that your
-computer's firewall allows incoming connections to Java on port 8080.
+computer's firewall allows incoming connections to Java on port 8080. No shared Wi-Fi? Connect the computer to
+the phone's hotspot.
+
+To see offline mode: open a goal, turn on Airplane mode and pull down to refresh. (Reopening the app offline
+needs a store build: in development Expo Go loads the app's code from your computer.)
+
+## What is stored on the phone
+
+| What | Where | Cleared |
+| --- | --- | --- |
+| Refresh token | iOS Keychain / Android Keystore (`expo-secure-store`) | on logout or when the server rejects it |
+| Access token | memory only | when the app closes |
+| Last goals, plan and progress (offline view), who is logged in | app storage (AsyncStorage, not encrypted) | on logout; data older than 7 days isn't shown |
+| Reminder setting and scheduled reminders | app storage, the phone's notification schedule | on logout |
 
 ## Scripts
 
@@ -36,6 +62,9 @@ computer's firewall allows incoming connections to Java on port 8080.
 | `npm test` | Jest + React Native Testing Library |
 | `npm run api:types` | Regenerate `src/api/schema.d.ts` from the running backend |
 
+GitHub Actions runs lint, typecheck, tests and `expo-doctor` on every push to `main` and every pull request that
+touches `mobile/`.
+
 ## Layout
 
 ```
@@ -43,9 +72,8 @@ src/
 ├── app/          # screens (Expo Router: every file is a route; tests live in src/__tests__)
 ├── api/          # generated types, client (token refresh), tokens in secure storage
 ├── auth/         # session: restore on launch, log in/out
-├── components/   # shared UI
+├── components/   # shared UI; goal/ holds the goal screen's cards
+├── reminders.ts  # daily check-in reminder (local notifications)
 └── theme.ts      # colours and spacing (same palette as the web app)
 ```
 
-The refresh token is stored in the iOS Keychain / Android Keystore (`expo-secure-store`); the access token only in
-memory.

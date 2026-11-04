@@ -31,7 +31,7 @@ Tasks are treated as a series, so leftover work must come first, not land weeks 
   - Missed ≥ 3 of the last 7 days → suggest a lighter plan
   - Repeatedly skipped heavy days → suggest lowering extra time
 
-## Mobile app (Expo, iOS + Android; started 2026-11-05)
+## Mobile app (Expo, iOS + Android; started 2026-11-05, first version done)
 - [x] Setup and login: Expo SDK 58 in `mobile/`, generated API types, token refresh, refresh token in secure storage
 - [x] Goals list and creating a goal (native date picker, tap-to-choose fields, pull to refresh)
 - [x] Goal screen: generate a plan, coach message, today's check-in, next 7 days, progress, milestones; last data
@@ -39,7 +39,7 @@ Tasks are treated as a series, so leftover work must come first, not land weeks 
 - [x] "Get back on track": move dates and add time confirmed in a system dialog; drop tasks in a sheet
 - [x] Daily check-in reminder: local notifications for the next 7 days, skipped once every goal is checked in;
       a setting of the phone (Settings screen), cleared on logout
-- [ ] CI workflow and README
+- [x] CI workflow (`.github/workflows/mobile.yml`) and README
 - [ ] Later: store builds (EAS), server push, minimum app version check
 
 ## Known problems (found 2026-11-03)
