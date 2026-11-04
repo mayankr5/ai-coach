@@ -38,8 +38,8 @@ Tasks are treated as a series, so leftover work must come first, not land weeks 
       plan generation returns 502. Fine for personal testing, not for real users.
 - [x] **Tests read the local `backend/.env`:** harmless today (AI is faked), but tests shouldn't depend on a
       developer's local config. Ignore `.env` in tests.
-- [ ] **Extra-time streak only sees future days:** "max 2 extra days in a row" doesn't count catch-up days
-      already in the past.
+- [x] **Extra-time streak only sees future days:** "max 2 extra days in a row" didn't count heavy days
+      already planned before the re-plan. Now the 2 days before it are counted from their task minutes.
 - [ ] **Small local models write inaccurate messages:** qwen 7B may describe changes that didn't happen.
       Gemini is much better; consider checking that the message mentions only real changes.
 
@@ -47,7 +47,7 @@ Tasks are treated as a series, so leftover work must come first, not land weeks 
 - [ ] Circuit breaker (Resilience4j): skip a model for a few minutes after repeated failures instead of
       waiting for its timeout on every request
 - [ ] Fill new days as the 14-day window moves (maybe covered by Stage 1 shifting; re-check after it)
-- [ ] Today is not frozen for a late check-in: checking in for yesterday re-plans from today
+- [x] Today is not frozen for a late check-in: re-plans (check-ins and the nightly job) now start tomorrow
 - [ ] Optional: one task row per piece of work (`remainingMinutes` + a `task_log` history table)
       instead of "Finish: X" copies
 - [ ] Optional: let AI pick a strategy (e.g. split a too-big task) that code then executes

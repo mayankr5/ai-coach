@@ -14,7 +14,8 @@ import java.util.*;
  * on the next day, and later tasks slide forward in order instead of the leftover landing weeks later.
  * <ul>
  *   <li>A day holds up to minutesPerDay; while catching up it may use the goal's extra minutes,
- *       but never on more than {@value #MAX_EXTRA_DAYS_IN_A_ROW} days in a row.</li>
+ *       but never on more than {@value #MAX_EXTRA_DAYS_IN_A_ROW} days in a row, counting heavy days
+ *       just before the re-plan.</li>
  *   <li>Tasks only ever move later, never earlier, and whole tasks move (no splitting).</li>
  *   <li>A task too big for any day gets a day to itself.</li>
  *   <li>A catch-up task takes the sequence number right after the task it continues, so it is listed
@@ -51,6 +52,8 @@ public class CatchUpScheduler {
 
         Map<LocalDate, Integer> used = new HashMap<>();
         Set<LocalDate> extraDays = new TreeSet<>();
+        // Every day over the normal time, including earlier ones, for the in-a-row limit
+        Set<LocalDate> heavyDays = new HashSet<>(req.recentExtraDays());
         List<TaskChange> changes = new ArrayList<>();
         List<TaskChange> followUps = new ArrayList<>();
         int shifted = 0;
@@ -66,7 +69,7 @@ public class CatchUpScheduler {
             }
             LocalDate day = cursor;
             if (behind) {
-                while (!day.isAfter(req.deadline()) && !fits(day, item.minutes(), used, extraDays, normal, withExtra)) {
+                while (!day.isAfter(req.deadline()) && !fits(day, item.minutes(), used, heavyDays, normal, withExtra)) {
                     day = day.plusDays(1);
                 }
                 if (day.isAfter(req.deadline())) {
@@ -77,6 +80,7 @@ public class CatchUpScheduler {
             int total = used.merge(day, item.minutes(), Integer::sum);
             if (behind && total > normal && total <= withExtra) {
                 extraDays.add(day);
+                heavyDays.add(day);
             }
             cursor = day;
 
@@ -93,7 +97,7 @@ public class CatchUpScheduler {
         return new CatchUpPlan(changes, followUps, shifted, List.copyOf(extraDays), overflow);
     }
 
-    private static boolean fits(LocalDate day, int minutes, Map<LocalDate, Integer> used, Set<LocalDate> extraDays,
+    private static boolean fits(LocalDate day, int minutes, Map<LocalDate, Integer> used, Set<LocalDate> heavyDays,
                                 int normal, int withExtra) {
         int dayUsed = used.getOrDefault(day, 0);
         if (dayUsed == 0 || dayUsed + minutes <= normal) {
@@ -101,9 +105,9 @@ public class CatchUpScheduler {
         }
         boolean extraStreakFull = true;
         for (int i = 1; i <= MAX_EXTRA_DAYS_IN_A_ROW; i++) {
-            extraStreakFull &= extraDays.contains(day.minusDays(i));
+            extraStreakFull &= heavyDays.contains(day.minusDays(i));
         }
-        return dayUsed + minutes <= withExtra && (extraDays.contains(day) || !extraStreakFull);
+        return dayUsed + minutes <= withExtra && (heavyDays.contains(day) || !extraStreakFull);
     }
 
     /** Partly done work needs about half the time again; skipped work needs all of it. */

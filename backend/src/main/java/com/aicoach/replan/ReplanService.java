@@ -131,7 +131,19 @@ public class ReplanService {
 
         return new RePlanRequest(goal.getId(), goal.getTitle(), goal.getDescription(), goal.getExperienceLevel(),
                 goal.getMinutesPerDay(), goal.getExtraMinutesPerDay(), goal.getDeadline(), from, windowEnd,
-                completionRate(goal.getId(), from), note, upcoming, missed, milestones);
+                completionRate(goal.getId(), from), note, recentExtraDays(goal, from), upcoming, missed, milestones);
+    }
+
+    /** Days just before {@code from} whose planned tasks add up to more than the normal daily time. */
+    private List<LocalDate> recentExtraDays(Goal goal, LocalDate from) {
+        Map<LocalDate, Integer> planned = tasks.findByGoalIdAndScheduledDateBetween(goal.getId(),
+                        from.minusDays(CatchUpScheduler.MAX_EXTRA_DAYS_IN_A_ROW), from.minusDays(1)).stream()
+                .collect(Collectors.groupingBy(Task::getScheduledDate, Collectors.summingInt(Task::getEstimatedMinutes)));
+        return planned.entrySet().stream()
+                .filter(e -> e.getValue() > goal.getMinutesPerDay())
+                .map(Map.Entry::getKey)
+                .sorted()
+                .toList();
     }
 
     /** (done minutes + half of partial minutes) / all minutes reported over the lookback period. */

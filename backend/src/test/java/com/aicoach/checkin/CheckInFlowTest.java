@@ -169,6 +169,53 @@ class CheckInFlowTest {
     }
 
     @Test
+    void lateCheckInForYesterdayLeavesTodayAlone() throws Exception {
+        Task todayTask = taskOn(today);
+        Task yesterdayTask = taskOn(today.plusDays(1));
+        yesterdayTask.setScheduledDate(today.minusDays(1));
+        tasks.save(yesterdayTask);
+        coachWriter.willReturn("Finish it tomorrow.");
+
+        mvc.perform(post(checkIns()).header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body(today.minusDays(1), yesterdayTask.getId(), "PARTIAL", null)))
+                .andExpect(status().isOk());
+
+        assertThat(coachWriter.requests.getFirst().from()).isEqualTo(today.plusDays(1));
+        assertThat(tasks.findByGoalIdAndScheduledDateBetween(goalId, today, today)).singleElement()
+                .satisfies(t -> assertThat(t.getId()).isEqualTo(todayTask.getId()));
+        assertThat(pendingTitled("Finish: " + yesterdayTask.getTitle())).singleElement()
+                .satisfies(t -> assertThat(t.getScheduledDate()).isEqualTo(today.plusDays(1)));
+    }
+
+    @Test
+    void heavyDaysAlreadyPlannedCountTowardsTheExtraTimeLimit() throws Exception {
+        // 60 min/day + 20 extra; yesterday and today are both planned at 70 minutes
+        mvc.perform(patch("/api/v1/goals/" + goalId).header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"extraMinutesPerDay\":20}"))
+                .andExpect(status().isOk());
+        Task todayTask = taskOn(today);
+        todayTask.setEstimatedMinutes(70);
+        tasks.save(todayTask);
+        Task yesterdayTask = taskOn(today.plusDays(5));
+        yesterdayTask.setScheduledDate(today.minusDays(1));
+        yesterdayTask.setEstimatedMinutes(70);
+        tasks.save(yesterdayTask);
+        Task tomorrowTask = taskOn(today.plusDays(1));
+        coachWriter.willReturn("Take it steady.");
+
+        // 35 left + tomorrow's 40 = 75 would fit with extra time, but that would be a third heavy day in a row
+        mvc.perform(post(checkIns()).header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body(today, todayTask.getId(), "PARTIAL", null)))
+                .andExpect(status().isOk());
+
+        assertThat(coachWriter.requests.getFirst().recentExtraDays()).containsExactly(today.minusDays(1), today);
+        assertThat(coachWriter.plans.getFirst().extraDays()).doesNotContain(today.plusDays(1));
+        assertThat(tasks.findById(tomorrowTask.getId()).orElseThrow().getScheduledDate()).isEqualTo(today.plusDays(2));
+    }
+
+    @Test
     void taskMovedByHandGoesLastOnItsNewDay() throws Exception {
         LocalDate tomorrow = today.plusDays(1);
         Task later = taskOn(today.plusDays(3));
@@ -261,8 +308,9 @@ class CheckInFlowTest {
         missedDayJob.run();
 
         assertThat(tasks.findById(overdue.getId()).orElseThrow().getStatus()).isEqualTo(TaskStatus.SKIPPED);
+        // Re-planned from tomorrow: the user's day may already have started
         assertThat(pendingTitled(overdue.getTitle())).hasSize(1)
-                .allMatch(t -> !t.getScheduledDate().isBefore(today));
+                .allMatch(t -> t.getScheduledDate().isAfter(today));
         assertThat(revisions.findAll()).anyMatch(r -> r.getSource() == RevisionSource.NIGHTLY);
         assertThat(coachWriter.requests).as("nightly job never calls the AI").isEmpty();
 

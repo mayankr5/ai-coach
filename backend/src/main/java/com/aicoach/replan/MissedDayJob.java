@@ -75,7 +75,8 @@ public class MissedDayJob {
         if (today == null) {
             return false;
         }
-        replanService.replan(goalId, today, null, false);
+        // From tomorrow: the user's day may already have started, and today's list never changes under them
+        replanService.replan(goalId, today.plusDays(1), null, false);
         return true;
     }
 }

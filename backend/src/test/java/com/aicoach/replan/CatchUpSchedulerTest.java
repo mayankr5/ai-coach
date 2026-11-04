@@ -36,6 +36,20 @@ class CatchUpSchedulerTest {
     }
 
     @Test
+    void heavyDaysBeforeTheReplanCountTowardsTheLimit() {
+        // Same as above, but the two days before FROM already went over 60 minutes
+        RePlanRequest req = request(15, FAR, List.of(FROM.minusDays(2), FROM.minusDays(1)), daily(3, 48),
+                List.of(missed(100L, "Install Spring Boot", 48, TaskStatus.PARTIAL)));
+
+        CatchUpPlan plan = scheduler.schedule(req);
+
+        assertThat(plan.extraDays()).doesNotContain(FROM);
+        assertThat(plan.followUps()).extracting(TaskChange::date).containsExactly(FROM);
+        assertThat(newDates(req, plan).getFirst()).isEqualTo(FROM.plusDays(1));
+        assertThat(perDay(req, plan)).containsEntry(FROM, 24);
+    }
+
+    @Test
     void withoutExtraTimeLaterTasksShiftForwardInOrder() {
         List<TaskView> upcoming = daily(3, 48);
         RePlanRequest req = request(0, FAR, upcoming,
@@ -170,7 +184,12 @@ class CatchUpSchedulerTest {
     }
 
     private static RePlanRequest request(int extra, LocalDate deadline, List<TaskView> upcoming, List<TaskView> missed) {
+        return request(extra, deadline, List.of(), upcoming, missed);
+    }
+
+    private static RePlanRequest request(int extra, LocalDate deadline, List<LocalDate> recentExtraDays,
+                                         List<TaskView> upcoming, List<TaskView> missed) {
         return new RePlanRequest(1L, "Learn Java", null, ExperienceLevel.BEGINNER, 60, extra, deadline, FROM,
-                FROM.plusDays(13), null, null, upcoming, missed, List.of());
+                FROM.plusDays(13), null, null, recentExtraDays, upcoming, missed, List.of());
     }
 }

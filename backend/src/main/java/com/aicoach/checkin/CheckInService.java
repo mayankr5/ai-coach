@@ -47,14 +47,22 @@ public class CheckInService {
         this.taskWindowDays = taskWindowDays;
     }
 
+    private record Recorded(Long checkInId, LocalDate today) {
+    }
+
     /**
-     * Records the day's results, then re-plans. The check-in is committed before the AI call,
+     * Records the day's results, then re-plans from tomorrow. The check-in is committed before the AI call,
      * so it is never lost even if re-planning fails.
      */
     public CheckInResponse submit(Long userId, Long goalId, CheckInRequest req) {
-        Long checkInId = tx.execute(status -> record(goalService.findOwned(userId, goalId), req));
+        Recorded recorded = tx.execute(status -> {
+            Goal goal = goalService.findOwned(userId, goalId);
+            return new Recorded(record(goal, req), today(goal));
+        });
+        Long checkInId = recorded.checkInId();
 
-        LocalDate from = req.date().plusDays(1);
+        // Today is never re-planned, even after a late check-in for yesterday: its list stays as the user saw it
+        LocalDate from = recorded.today().plusDays(1);
         ReplanResult result = replanService.replan(goalId, from, req.note(), true);
 
         return tx.execute(status -> {
@@ -70,11 +78,15 @@ public class CheckInService {
         });
     }
 
+    private static LocalDate today(Goal goal) {
+        return LocalDate.now(ZoneId.of(goal.getUser().getTimezone()));
+    }
+
     private Long record(Goal goal, CheckInRequest req) {
         if (goal.getStatus() != GoalStatus.ACTIVE) {
             throw new BadRequestException("Only active goals can be checked in");
         }
-        LocalDate today = LocalDate.now(ZoneId.of(goal.getUser().getTimezone()));
+        LocalDate today = today(goal);
         if (!req.date().equals(today) && !req.date().equals(today.minusDays(1))) {
             throw new BadRequestException("Check-ins are only allowed for today (" + today + ") or yesterday");
         }
