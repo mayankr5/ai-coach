@@ -33,6 +33,7 @@ import java.util.List;
 
 import static com.aicoach.TestApi.*;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -249,7 +250,7 @@ class CheckInFlowTest {
                         .content(body(today, todayTask.getId(), "PARTIAL", "Ran out of time")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.replanSource").value("FALLBACK"))
-                .andExpect(jsonPath("$.coachMessage").value("Added 1 catch-up task starting " + today.plusDays(1) + "."))
+                .andExpect(jsonPath("$.coachMessage").value(startsWith("Added 1 catch-up task starting tomorrow (")))
                 .andExpect(jsonPath("$.upcomingTasks[?(@.title == 'Finish: " + todayTask.getTitle() + "')].scheduledDate")
                         .value(today.plusDays(1).toString()));
     }

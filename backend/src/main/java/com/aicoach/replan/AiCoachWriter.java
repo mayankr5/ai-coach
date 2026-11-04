@@ -23,6 +23,8 @@ public class AiCoachWriter implements CoachWriter {
             If the user wrote a note, respond to it directly and give one concrete, practical tip.
             Mention the most important plan change in plain words.
             If some work doesn't fit before the deadline, say so honestly.
+            Write dates exactly as the facts do, e.g. "tomorrow (Thu 5 Nov)" or "Sat 7 Nov", and mention no other dates.
+            Plan changes never happen today; never call a later day "today".
             """;
 
     record CoachMessage(String message) {
@@ -38,29 +40,45 @@ public class AiCoachWriter implements CoachWriter {
 
     @Override
     public AiResult<String> write(RePlanRequest req, CatchUpPlan plan) {
+        DayLabels labels = new DayLabels(req.today());
+        String facts = facts(req, plan, labels);
         AiResult<CoachMessage> result = chain.call(new AiTask<>("write a coach message", props.messageTimeout(),
                 props.messageBudget(),
-                (client, problems) -> client.prompt().system(SYSTEM_PROMPT).user(userPrompt(req, plan, problems))
+                (client, problems) -> client.prompt().system(SYSTEM_PROMPT).user(withProblems(facts, problems))
                         .call().entity(CoachMessage.class),
-                AiCoachWriter::check));
+                m -> check(m, labels)));
         return new AiResult<>(result.value().message().strip(), result.model());
     }
 
-    private static List<String> check(CoachMessage m) {
+    /** Length limits, then dates: only today and the dates in the facts may appear. */
+    static List<String> check(CoachMessage m, DayLabels labels) {
         if (m.message() == null || m.message().isBlank()) {
             return List.of("The message is empty");
         }
         if (m.message().length() > MAX_MESSAGE) {
             return List.of("The message is " + m.message().length() + " characters; keep it under " + MAX_MESSAGE);
         }
-        return List.of();
+        return MessageDates.problems(m.message(), labels.today(), labels.written());
     }
 
-    private static String userPrompt(RePlanRequest req, CatchUpPlan plan, List<String> problems) {
+    private static String withProblems(String facts, List<String> problems) {
+        if (problems.isEmpty()) {
+            return facts;
+        }
+        StringBuilder sb = new StringBuilder(facts).append("\nYour previous answer was rejected. Fix these problems:\n");
+        problems.forEach(p -> sb.append("- ").append(p).append('\n'));
+        return sb.toString();
+    }
+
+    /** Every date goes through {@code labels}, which records it as one the message may mention. */
+    static String facts(RePlanRequest req, CatchUpPlan plan, DayLabels labels) {
         StringBuilder sb = new StringBuilder()
+                .append("Today: ").append(labels.of(req.today())).append('\n')
+                .append("Plan changes start ").append(labels.of(req.from()))
+                .append("; today's tasks never change\n")
                 .append("Goal: ").append(req.title()).append('\n')
                 .append("Experience level: ").append(req.experienceLevel()).append('\n')
-                .append("Deadline: ").append(req.deadline()).append('\n')
+                .append("Deadline: ").append(labels.of(req.deadline())).append('\n')
                 .append("Completion rate (last 2 weeks): ")
                 .append(req.completionRate() == null ? "no data yet" : Math.round(req.completionRate() * 100) + "%")
                 .append('\n')
@@ -69,7 +87,8 @@ public class AiCoachWriter implements CoachWriter {
         if (req.missed().isEmpty()) {
             sb.append("- none\n");
         }
-        req.missed().forEach(t -> sb.append("- ").append(t.status()).append(": ").append(t.title()).append('\n'));
+        req.missed().forEach(t -> sb.append("- ").append(t.status()).append(": ").append(t.title())
+                .append(" (planned ").append(labels.of(t.date())).append(")\n"));
 
         sb.append("\nPlan changes already made:\n");
         if (plan.isEmpty()) {
@@ -77,33 +96,29 @@ public class AiCoachWriter implements CoachWriter {
         }
         for (TaskChange f : plan.followUps()) {
             sb.append("- Added \"").append(f.title()).append("\" (").append(f.minutes()).append(" min) on ")
-                    .append(f.date()).append('\n');
+                    .append(labels.of(f.date())).append('\n');
         }
         if (plan.shifted() > 0) {
             sb.append("- Moved ").append(plan.shifted()).append(" later tasks forward to keep them in order\n");
         }
         if (!plan.extraDays().isEmpty()) {
-            sb.append("- Uses the user's extra catch-up time on ").append(plan.extraDays()).append('\n');
+            sb.append("- Uses the user's extra catch-up time on ").append(labels.of(plan.extraDays())).append('\n');
         }
         if (!plan.bufferDaysUsed().isEmpty()) {
             sb.append("- Uses the user's weekly buffer day (kept free for catching up) on ")
-                    .append(plan.bufferDaysUsed()).append('\n');
+                    .append(labels.of(plan.bufferDaysUsed())).append('\n');
         }
         if (plan.overflow() > 0) {
             sb.append("- ").append(plan.overflow()).append(" tasks don't fit before the deadline\n");
         }
 
         sb.append("\nNext tasks:\n");
-        nextTasks(req, plan).forEach(line -> sb.append("- ").append(line).append('\n'));
-        if (!problems.isEmpty()) {
-            sb.append("\nYour previous answer was rejected. Fix these problems:\n");
-            problems.forEach(p -> sb.append("- ").append(p).append('\n'));
-        }
+        nextTasks(req, plan, labels).forEach(line -> sb.append("- ").append(line).append('\n'));
         return sb.toString();
     }
 
     /** The first few tasks after the re-plan, so the message can point at what comes next. */
-    private static List<String> nextTasks(RePlanRequest req, CatchUpPlan plan) {
+    private static List<String> nextTasks(RePlanRequest req, CatchUpPlan plan, DayLabels labels) {
         record Row(LocalDate date, int sequence, String title) {
         }
         Map<Long, LocalDate> moved = new HashMap<>();
@@ -113,6 +128,6 @@ public class AiCoachWriter implements CoachWriter {
         req.upcoming().forEach(t -> rows.add(new Row(moved.getOrDefault(t.id(), t.date()), t.sequence(), t.title())));
         // Same order the user sees: by day, then by place in the series (catch-up work first)
         return rows.stream().sorted(Comparator.comparing(Row::date).thenComparingInt(Row::sequence)).limit(3)
-                .map(r -> r.title() + " on " + r.date()).toList();
+                .map(r -> r.title() + " on " + labels.of(r.date())).toList();
     }
 }

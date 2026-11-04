@@ -64,7 +64,7 @@ class CatchUpSchedulerTest {
         assertThat(newDates(req, plan)).containsExactly(FROM.plusDays(1), buffer, FROM.plusDays(3), FROM.plusDays(4));
         assertThat(plan.shifted()).isEqualTo(2);
         assertThat(plan.bufferDaysUsed()).containsExactly(buffer);
-        assertThat(ReplanService.defaultMessage(plan)).contains("Using your buffer day on " + buffer + " to catch up.");
+        assertThat(ReplanService.defaultMessage(plan, FROM.minusDays(1))).contains("Using your buffer day on Fri 6 Nov to catch up.");
     }
 
     @Test
@@ -114,7 +114,7 @@ class CatchUpSchedulerTest {
         CatchUpPlan plan = scheduler.schedule(req);
 
         assertThat(plan.isEmpty()).isTrue();
-        assertThat(ReplanService.defaultMessage(plan)).contains("Nothing to catch up on");
+        assertThat(ReplanService.defaultMessage(plan, FROM.minusDays(1))).contains("Nothing to catch up on");
     }
 
     @Test
@@ -126,7 +126,7 @@ class CatchUpSchedulerTest {
 
         assertThat(plan.followUps()).extracting(TaskChange::date).containsExactly(FROM);
         assertThat(plan.overflow()).isEqualTo(1);
-        assertThat(ReplanService.defaultMessage(plan)).contains("1 task doesn't fit before the deadline");
+        assertThat(ReplanService.defaultMessage(plan, FROM.minusDays(1))).contains("1 task doesn't fit before the deadline");
     }
 
     @Test
@@ -139,8 +139,8 @@ class CatchUpSchedulerTest {
         CatchUpPlan plan = scheduler.schedule(req);
 
         assertThat(newDates(req, plan)).containsExactly(FROM.plusDays(1), FROM.plusDays(2));
-        assertThat(ReplanService.defaultMessage(plan))
-                .isEqualTo("Added 1 catch-up task starting " + FROM + ". Moved 2 later tasks forward to keep the order.");
+        assertThat(ReplanService.defaultMessage(plan, FROM.minusDays(1)))
+                .isEqualTo("Added 1 catch-up task starting tomorrow (Wed 4 Nov). Moved 2 later tasks forward to keep the order.");
     }
 
     @Test

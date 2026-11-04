@@ -84,7 +84,7 @@ public class ReplanService {
             }
         }
         if (message == null) {
-            message = defaultMessage(plan);
+            message = defaultMessage(plan, request.today());
         }
 
         PlanChanges changes = new PlanChanges(message, plan.changes());
@@ -94,7 +94,8 @@ public class ReplanService {
         return new ReplanResult(message, source);
     }
 
-    static String defaultMessage(CatchUpPlan plan) {
+    static String defaultMessage(CatchUpPlan plan, LocalDate today) {
+        DayLabels labels = new DayLabels(today);
         if (plan.isEmpty()) {
             return "Nothing to catch up on. Keep going with the plan.";
         }
@@ -102,19 +103,17 @@ public class ReplanService {
         int added = plan.followUps().size();
         if (added > 0) {
             parts.add("Added " + added + (added == 1 ? " catch-up task" : " catch-up tasks") + " starting "
-                    + plan.followUps().getFirst().date() + ".");
+                    + labels.of(plan.followUps().getFirst().date()) + ".");
         }
         if (plan.shifted() > 0) {
             parts.add("Moved " + plan.shifted() + (plan.shifted() == 1 ? " later task" : " later tasks")
                     + " forward to keep the order.");
         }
         if (!plan.extraDays().isEmpty()) {
-            parts.add("Using your extra time on " + plan.extraDays().stream().map(LocalDate::toString)
-                    .collect(Collectors.joining(", ")) + ".");
+            parts.add("Using your extra time on " + labels.of(plan.extraDays()) + ".");
         }
         if (!plan.bufferDaysUsed().isEmpty()) {
-            parts.add("Using your buffer day on " + plan.bufferDaysUsed().stream().map(LocalDate::toString)
-                    .collect(Collectors.joining(", ")) + " to catch up.");
+            parts.add("Using your buffer day on " + labels.of(plan.bufferDaysUsed()) + " to catch up.");
         }
         if (plan.overflow() > 0) {
             parts.add(plan.overflow() + (plan.overflow() == 1 ? " task doesn't" : " tasks don't")

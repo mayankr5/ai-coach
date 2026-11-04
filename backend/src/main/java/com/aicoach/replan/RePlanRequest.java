@@ -27,6 +27,11 @@ public record RePlanRequest(Long goalId, String title, String description, Exper
                             List<MilestoneView> milestones) {
 
     /** @param sequence place in the goal's series; upcoming tasks are scheduled in this order */
+    /** The user's today: re-plans always start the day after it, so today's list never changes. */
+    public LocalDate today() {
+        return from.minusDays(1);
+    }
+
     public record TaskView(Long id, String title, LocalDate date, int minutes, Long milestoneId, TaskStatus status,
                            int sequence) {
     }

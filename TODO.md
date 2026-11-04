@@ -41,8 +41,13 @@ Tasks are treated as a series, so leftover work must come first, not land weeks 
       developer's local config. Ignore `.env` in tests.
 - [x] **Extra-time streak only sees future days:** "max 2 extra days in a row" didn't count heavy days
       already planned before the re-plan. Now the 2 days before it are counted from their task minutes.
-- [ ] **Small local models write inaccurate messages:** qwen 7B may describe changes that didn't happen.
-      Gemini is much better; consider checking that the message mentions only real changes.
+- [x] **Inaccurate coach messages:** models invented dates or called tomorrow "today". The prompt now says
+      what today is and labels every date ("tomorrow (Thu 5 Nov)"); `MessageDates` rejects messages with
+      dates not in the facts or "today" next to another date, and the model retries with the problem.
+- [ ] **Wording beyond dates isn't checked:** a model could still describe a change that didn't happen
+      without naming a date. Fine with Gemini so far; revisit if it shows up.
+- [ ] **qwen 7B can miss the 60s plan timeout** on a cold start (seen 2026-11-04); fine as a fallback model,
+      or raise `app.ai.plan-timeout` for local-only use.
 
 ## Later
 - [ ] Circuit breaker (Resilience4j): skip a model for a few minutes after repeated failures instead of
