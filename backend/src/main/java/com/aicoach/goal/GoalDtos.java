@@ -2,6 +2,7 @@ package com.aicoach.goal;
 
 import jakarta.validation.constraints.*;
 
+import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -18,6 +19,8 @@ public final class GoalDtos {
             @NotNull @Min(10) @Max(600) Integer minutesPerDay,
             /** Optional, defaults to 0; at most half of minutesPerDay. */
             @Min(0) Integer extraMinutesPerDay,
+            /** Optional, defaults to SUNDAY: the weekday kept free of planned tasks for catching up. */
+            DayOfWeek bufferDay,
             @NotNull ExperienceLevel experienceLevel) {
     }
 
@@ -28,6 +31,7 @@ public final class GoalDtos {
             @Future LocalDate deadline,
             @Min(10) @Max(600) Integer minutesPerDay,
             @Min(0) Integer extraMinutesPerDay,
+            DayOfWeek bufferDay,
             ExperienceLevel experienceLevel,
             GoalStatus status) {
     }
@@ -46,11 +50,12 @@ public final class GoalDtos {
 
     public record GoalResponse(
             Long id, String title, String description, LocalDate deadline, int minutesPerDay,
-            int extraMinutesPerDay, ExperienceLevel experienceLevel, GoalStatus status, Instant createdAt,
-            List<MilestoneResponse> milestones) {
+            int extraMinutesPerDay, DayOfWeek bufferDay, ExperienceLevel experienceLevel, GoalStatus status,
+            Instant createdAt, List<MilestoneResponse> milestones) {
         static GoalResponse from(Goal g) {
             return new GoalResponse(g.getId(), g.getTitle(), g.getDescription(), g.getDeadline(),
-                    g.getMinutesPerDay(), g.getExtraMinutesPerDay(), g.getExperienceLevel(), g.getStatus(), g.getCreatedAt(),
+                    g.getMinutesPerDay(), g.getExtraMinutesPerDay(), g.getBufferDay(), g.getExperienceLevel(),
+                    g.getStatus(), g.getCreatedAt(),
                     g.getMilestones().stream().map(MilestoneResponse::from).toList());
         }
     }

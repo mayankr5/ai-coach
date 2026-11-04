@@ -7,6 +7,7 @@ import com.aicoach.plan.GeneratedPlan.PlannedMilestone;
 import com.aicoach.plan.GeneratedPlan.PlannedTask;
 import com.aicoach.plan.PlanRevisionRepository;
 import com.aicoach.plan.RevisionSource;
+import com.aicoach.replan.CatchUpPlan;
 import com.aicoach.replan.FakeCoachWriter;
 import com.aicoach.replan.MissedDayJob;
 import com.aicoach.task.Task;
@@ -83,10 +84,11 @@ class CheckInFlowTest {
         coachWriter.reset();
         today = LocalDate.now(ZoneId.of(TZ));
 
-        // One 40-minute task per day across the 14-day window
+        // One 40-minute task per day across the 14-day window, except the buffer days (today + 6 and + 13)
         planGenerator.willReturn(req -> {
             List<PlannedTask> planned = new ArrayList<>();
             for (LocalDate d = req.today(); !d.isAfter(req.taskWindowEnd()); d = d.plusDays(1)) {
+                if (req.isBufferDay(d)) continue;
                 planned.add(new PlannedTask("Study " + d, d, 40));
             }
             return new GeneratedPlan(List.of(
@@ -94,7 +96,7 @@ class CheckInFlowTest {
                     new PlannedMilestone("Projects", req.deadline(), List.of())));
         });
         token = register(mvc, TZ);
-        goalId = createGoal(mvc, token);
+        goalId = createGoal(mvc, token, ZoneId.of(TZ));
         generatePlan(mvc, token, goalId);
     }
 
@@ -144,7 +146,11 @@ class CheckInFlowTest {
         assertThat(pendingTitled(todayTask.getTitle())).singleElement()
                 .satisfies(t -> assertThat(t.getScheduledDate()).isEqualTo(today.plusDays(1)));
         assertThat(tasks.findById(tomorrowTask.getId()).orElseThrow().getScheduledDate()).isEqualTo(today.plusDays(2));
-        assertThat(coachWriter.plans.getFirst().shifted()).isEqualTo(13);
+        // The shifting stops at the buffer day: the task from today + 5 lands on it, the next week is untouched
+        CatchUpPlan plan = coachWriter.plans.getFirst();
+        assertThat(plan.shifted()).isEqualTo(5);
+        assertThat(plan.bufferDaysUsed()).containsExactly(today.plusDays(6));
+        assertThat(taskOn(today.plusDays(7)).getTitle()).isEqualTo("Study " + today.plusDays(7));
     }
 
     @Test
@@ -291,11 +297,13 @@ class CheckInFlowTest {
 
         mvc.perform(get("/api/v1/goals/" + goalId + "/progress").header("Authorization", bearer(token)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalTasks").value(14))
+                .andExpect(jsonPath("$.totalTasks").value(12))
                 .andExpect(jsonPath("$.doneTasks").value(1))
-                .andExpect(jsonPath("$.percentComplete").value(7))
+                .andExpect(jsonPath("$.percentComplete").value(8))
                 .andExpect(jsonPath("$.completionRate").value(1.0))
                 .andExpect(jsonPath("$.nextMilestone.title").value("Basics"))
+                .andExpect(jsonPath("$.healthPercent").value(100))
+                .andExpect(jsonPath("$.minutesBehind").value(0))
                 .andExpect(jsonPath("$.onTrack").value(true));
     }
 

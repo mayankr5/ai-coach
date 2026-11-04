@@ -4,7 +4,9 @@ import com.jayway.jsonpath.JsonPath;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -25,11 +27,21 @@ public final class TestApi {
         return JsonPath.read(body, "$.accessToken");
     }
 
-    public static long createGoal(MockMvc mvc, String token) throws Exception {
+    /**
+     * A buffer weekday six days after today, so tests can rely on today to today + 5 being working days;
+     * the buffer days then fall on today + 6 and today + 13.
+     */
+    public static DayOfWeek bufferDaySixDaysFrom(ZoneId zone) {
+        return LocalDate.now(zone).plusDays(6).getDayOfWeek();
+    }
+
+    /** A goal with 60 minutes a day whose buffer days are today + 6 and today + 13 in {@code zone}. */
+    public static long createGoal(MockMvc mvc, String token, ZoneId zone) throws Exception {
         String body = mvc.perform(post("/api/v1/goals").header("Authorization", bearer(token))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\":\"Learn Java\",\"deadline\":\"" + LocalDate.now().plusMonths(2)
-                                + "\",\"minutesPerDay\":60,\"experienceLevel\":\"BEGINNER\"}"))
+                                + "\",\"minutesPerDay\":60,\"experienceLevel\":\"BEGINNER\",\"bufferDay\":\""
+                                + bufferDaySixDaysFrom(zone) + "\"}"))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         return ((Number) JsonPath.read(body, "$.id")).longValue();

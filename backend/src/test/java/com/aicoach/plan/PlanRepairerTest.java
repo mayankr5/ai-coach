@@ -14,7 +14,7 @@ class PlanRepairerTest {
 
     static final LocalDate TODAY = LocalDate.of(2026, 11, 2);
     static final PlanRequest REQ = new PlanRequest("Learn Java", null, ExperienceLevel.BEGINNER,
-            60, TODAY.plusDays(60), TODAY, TODAY.plusDays(13));
+            60, TODAY.plusDays(60), TODAY, TODAY.plusDays(13), null);
 
     final PlanRepairer repairer = new PlanRepairer();
 

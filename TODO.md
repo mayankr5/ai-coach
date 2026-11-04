@@ -16,9 +16,10 @@ Tasks are treated as a series, so leftover work must come first, not land weeks 
   - Otherwise the following tasks shift forward in order, never over the limit
   - Extra time used at most 2 days in a row
   - AI only writes the coach message (responding to the user's note)
-- [ ] **Stage 2 — weekly buffer day + health**
-  - One catch-up day per week with no new tasks; shifts stop there
-  - Health = remaining capacity / remaining work; show "X min behind"
+- [x] **Stage 2 — weekly buffer day + health**
+  - Goal `bufferDay` (default Sunday): no planned tasks that day; catch-up work flows in and shifts stop there
+  - Working days planned to 90% instead of 80%, so weekly planned time stays about the same
+  - Progress shows `healthPercent` and `minutesBehind` for the next milestone (buffer days count, extra time doesn't)
 - [ ] **Stage 3 — plan no longer fits (health < 100%)**
   - Offer choices: extend deadline / more daily time (code calculates) / cut scope (AI suggests) / re-plan
   - New endpoint to apply the chosen option

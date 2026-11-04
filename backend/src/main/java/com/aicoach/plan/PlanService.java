@@ -83,7 +83,7 @@ public class PlanService {
             windowEnd = goal.getDeadline();
         }
         return new PlanRequest(goal.getTitle(), goal.getDescription(), goal.getExperienceLevel(),
-                goal.getMinutesPerDay(), goal.getDeadline(), today, windowEnd);
+                goal.getMinutesPerDay(), goal.getDeadline(), today, windowEnd, goal.getBufferDay());
     }
 
     private PlanResponse save(Goal goal, GeneratedPlan plan, String model) {

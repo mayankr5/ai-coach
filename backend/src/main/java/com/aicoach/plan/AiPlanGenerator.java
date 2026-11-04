@@ -8,8 +8,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Asks the AI chain for a plan. Out-of-window tasks are dropped before validation, and a rejected plan's
@@ -19,6 +21,10 @@ import java.util.List;
 public class AiPlanGenerator implements PlanGenerator {
 
     private static final Logger log = LoggerFactory.getLogger(AiPlanGenerator.class);
+    /** Share of the daily time to plan, leaving room for catch-up work. */
+    static final double DAILY_FILL = 0.8;
+    /** With a weekly buffer day the slack lives in that day, so working days can be fuller. */
+    static final double DAILY_FILL_WITH_BUFFER_DAY = 0.9;
 
     private static final String SYSTEM_PROMPT = """
             You are a realistic, encouraging coach who turns a goal into a study/work plan.
@@ -62,8 +68,11 @@ public class AiPlanGenerator implements PlanGenerator {
         long windowDays = ChronoUnit.DAYS.between(req.today(), req.taskWindowEnd()) + 1;
         // Small models follow concrete numbers far better than abstract rules, so the targets are computed here
         long milestoneCount = Math.max(2, Math.min(8, Math.round(totalDays / 10.0)));
-        int dailyTarget = (int) Math.round(req.minutesPerDay() * 0.8);
-        long windowTarget = windowDays * dailyTarget;
+        // Slack is kept either a little each day or, with a buffer day, all in that day
+        double fill = req.bufferDay() == null ? DAILY_FILL : DAILY_FILL_WITH_BUFFER_DAY;
+        int dailyTarget = (int) Math.round(req.minutesPerDay() * fill);
+        long windowTarget = req.workingDays() * dailyTarget;
+        List<LocalDate> bufferDates = req.bufferDates();
 
         StringBuilder sb = new StringBuilder()
                 .append("Goal: ").append(req.title()).append('\n')
@@ -75,7 +84,12 @@ public class AiPlanGenerator implements PlanGenerator {
                 .append("- Exactly ").append(milestoneCount).append(" milestones, evenly spaced; the last milestone's ")
                 .append("targetDate is ").append(req.deadline()).append('\n')
                 .append("- Tasks only on dates ").append(req.today()).append(" to ").append(req.taskWindowEnd())
-                .append(" (").append(windowDays).append(" days); later milestones get an empty tasks list\n")
+                .append(" (").append(windowDays).append(" days); later milestones get an empty tasks list\n");
+        if (!bufferDates.isEmpty()) {
+            sb.append("- No tasks at all on ").append(bufferDates.stream().map(LocalDate::toString)
+                    .collect(Collectors.joining(", "))).append(" (buffer days, kept free for catching up)\n");
+        }
+        sb
                 .append("- About ").append(dailyTarget).append(" minutes of tasks per day, never more than ")
                 .append(req.minutesPerDay()).append(" on one date\n")
                 .append("- Usually 1 or 2 tasks per day of 20 to ").append(req.minutesPerDay()).append(" minutes each\n")

@@ -11,10 +11,11 @@ import java.util.List;
  * @param followUps tasks added for missed or partly done work, in order
  * @param shifted   number of existing tasks moved to a later date to keep the order
  * @param extraDays days that use the goal's extra minutes
+ * @param bufferDaysUsed buffer days that now hold catch-up or shifted work
  * @param overflow  number of tasks that don't fit before the deadline (placed on the deadline anyway)
  */
 public record CatchUpPlan(List<TaskChange> changes, List<TaskChange> followUps, int shifted,
-                          List<LocalDate> extraDays, int overflow) {
+                          List<LocalDate> extraDays, List<LocalDate> bufferDaysUsed, int overflow) {
 
     public boolean isEmpty() {
         return changes.isEmpty() && overflow == 0;

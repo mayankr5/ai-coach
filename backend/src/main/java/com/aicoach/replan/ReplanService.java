@@ -112,6 +112,10 @@ public class ReplanService {
             parts.add("Using your extra time on " + plan.extraDays().stream().map(LocalDate::toString)
                     .collect(Collectors.joining(", ")) + ".");
         }
+        if (!plan.bufferDaysUsed().isEmpty()) {
+            parts.add("Using your buffer day on " + plan.bufferDaysUsed().stream().map(LocalDate::toString)
+                    .collect(Collectors.joining(", ")) + " to catch up.");
+        }
         if (plan.overflow() > 0) {
             parts.add(plan.overflow() + (plan.overflow() == 1 ? " task doesn't" : " tasks don't")
                     + " fit before the deadline; consider extending it or adding daily time.");
@@ -130,7 +134,8 @@ public class ReplanService {
                 .map(m -> new MilestoneView(m.getId(), m.getTitle(), m.getTargetDate())).toList();
 
         return new RePlanRequest(goal.getId(), goal.getTitle(), goal.getDescription(), goal.getExperienceLevel(),
-                goal.getMinutesPerDay(), goal.getExtraMinutesPerDay(), goal.getDeadline(), from, windowEnd,
+                goal.getMinutesPerDay(), goal.getExtraMinutesPerDay(), goal.getBufferDay(), goal.getDeadline(),
+                from, windowEnd,
                 completionRate(goal.getId(), from), note, recentExtraDays(goal, from), upcoming, missed, milestones);
     }
 

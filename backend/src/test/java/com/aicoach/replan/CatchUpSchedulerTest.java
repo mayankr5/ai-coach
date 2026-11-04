@@ -7,6 +7,7 @@ import com.aicoach.replan.RePlanRequest.TaskView;
 import com.aicoach.task.TaskStatus;
 import org.junit.jupiter.api.Test;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
 
@@ -47,6 +48,23 @@ class CatchUpSchedulerTest {
         assertThat(plan.followUps()).extracting(TaskChange::date).containsExactly(FROM);
         assertThat(newDates(req, plan).getFirst()).isEqualTo(FROM.plusDays(1));
         assertThat(perDay(req, plan)).containsEntry(FROM, 24);
+    }
+
+    @Test
+    void bufferDayAbsorbsTheShiftAndTheRestOfThePlanHolds() {
+        // Tasks every day except FROM + 2, the buffer day
+        LocalDate buffer = FROM.plusDays(2);
+        List<TaskView> upcoming = List.of(task(1L, "Day 0", FROM, 48), task(2L, "Day 1", FROM.plusDays(1), 48),
+                task(3L, "Day 3", FROM.plusDays(3), 48), task(4L, "Day 4", FROM.plusDays(4), 48));
+        RePlanRequest req = request(0, buffer.getDayOfWeek(), FAR, List.of(), upcoming,
+                List.of(missed(100L, "Install Spring Boot", 48, TaskStatus.PARTIAL)));
+
+        CatchUpPlan plan = scheduler.schedule(req);
+
+        assertThat(newDates(req, plan)).containsExactly(FROM.plusDays(1), buffer, FROM.plusDays(3), FROM.plusDays(4));
+        assertThat(plan.shifted()).isEqualTo(2);
+        assertThat(plan.bufferDaysUsed()).containsExactly(buffer);
+        assertThat(ReplanService.defaultMessage(plan)).contains("Using your buffer day on " + buffer + " to catch up.");
     }
 
     @Test
@@ -189,7 +207,13 @@ class CatchUpSchedulerTest {
 
     private static RePlanRequest request(int extra, LocalDate deadline, List<LocalDate> recentExtraDays,
                                          List<TaskView> upcoming, List<TaskView> missed) {
-        return new RePlanRequest(1L, "Learn Java", null, ExperienceLevel.BEGINNER, 60, extra, deadline, FROM,
+        return request(extra, null, deadline, recentExtraDays, upcoming, missed);
+    }
+
+    private static RePlanRequest request(int extra, DayOfWeek bufferDay, LocalDate deadline,
+                                         List<LocalDate> recentExtraDays, List<TaskView> upcoming,
+                                         List<TaskView> missed) {
+        return new RePlanRequest(1L, "Learn Java", null, ExperienceLevel.BEGINNER, 60, extra, bufferDay, deadline, FROM,
                 FROM.plusDays(13), null, null, recentExtraDays, upcoming, missed, List.of());
     }
 }

@@ -22,6 +22,7 @@ import java.util.*;
  *       first on its day and stays ahead of later work in future re-plans.</li>
  *   <li>Work that can't fit before the deadline is put on the deadline and reported as overflow.</li>
  * </ul>
+ * Buffer days are empty in the plan, so while catching up work flows into them and the shifting stops there.
  * With nothing missed, the plan is returned unchanged.
  */
 @Component
@@ -52,6 +53,7 @@ public class CatchUpScheduler {
 
         Map<LocalDate, Integer> used = new HashMap<>();
         Set<LocalDate> extraDays = new TreeSet<>();
+        Set<LocalDate> bufferDaysUsed = new TreeSet<>();
         // Every day over the normal time, including earlier ones, for the in-a-row limit
         Set<LocalDate> heavyDays = new HashSet<>(req.recentExtraDays());
         List<TaskChange> changes = new ArrayList<>();
@@ -83,6 +85,10 @@ public class CatchUpScheduler {
                 heavyDays.add(day);
             }
             cursor = day;
+            boolean placedByCatchUp = item.followUp() != null || !day.equals(item.task().date());
+            if (placedByCatchUp && req.bufferDay() != null && day.getDayOfWeek() == req.bufferDay()) {
+                bufferDaysUsed.add(day);
+            }
 
             if (item.followUp() != null) {
                 TaskChange add = new TaskChange(Action.ADD, null, item.followUp().title(), day,
@@ -94,7 +100,8 @@ public class CatchUpScheduler {
                 shifted++;
             }
         }
-        return new CatchUpPlan(changes, followUps, shifted, List.copyOf(extraDays), overflow);
+        return new CatchUpPlan(changes, followUps, shifted, List.copyOf(extraDays), List.copyOf(bufferDaysUsed),
+                overflow);
     }
 
     private static boolean fits(LocalDate day, int minutes, Map<LocalDate, Integer> used, Set<LocalDate> heavyDays,

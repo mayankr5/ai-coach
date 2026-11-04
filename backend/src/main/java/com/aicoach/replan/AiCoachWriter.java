@@ -85,6 +85,10 @@ public class AiCoachWriter implements CoachWriter {
         if (!plan.extraDays().isEmpty()) {
             sb.append("- Uses the user's extra catch-up time on ").append(plan.extraDays()).append('\n');
         }
+        if (!plan.bufferDaysUsed().isEmpty()) {
+            sb.append("- Uses the user's weekly buffer day (kept free for catching up) on ")
+                    .append(plan.bufferDaysUsed()).append('\n');
+        }
         if (plan.overflow() > 0) {
             sb.append("- ").append(plan.overflow()).append(" tasks don't fit before the deadline\n");
         }

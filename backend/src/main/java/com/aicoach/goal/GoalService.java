@@ -10,8 +10,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
+
 @Service
 public class GoalService {
+
+    static final DayOfWeek DEFAULT_BUFFER_DAY = DayOfWeek.SUNDAY;
 
     private final GoalRepository goals;
     private final UserRepository users;
@@ -30,6 +34,7 @@ public class GoalService {
         goal.setDeadline(req.deadline());
         goal.setMinutesPerDay(req.minutesPerDay());
         goal.setExtraMinutesPerDay(req.extraMinutesPerDay() == null ? 0 : req.extraMinutesPerDay());
+        goal.setBufferDay(req.bufferDay() == null ? DEFAULT_BUFFER_DAY : req.bufferDay());
         goal.setExperienceLevel(req.experienceLevel());
         checkExtraMinutes(goal);
         return GoalResponse.from(goals.save(goal));
@@ -56,6 +61,8 @@ public class GoalService {
         if (req.deadline() != null) goal.setDeadline(req.deadline());
         if (req.minutesPerDay() != null) goal.setMinutesPerDay(req.minutesPerDay());
         if (req.extraMinutesPerDay() != null) goal.setExtraMinutesPerDay(req.extraMinutesPerDay());
+        // Takes effect when the plan is next generated; tasks already on that weekday stay put
+        if (req.bufferDay() != null) goal.setBufferDay(req.bufferDay());
         if (req.experienceLevel() != null) goal.setExperienceLevel(req.experienceLevel());
         if (req.status() != null) goal.setStatus(req.status());
         checkExtraMinutes(goal);

@@ -5,7 +5,6 @@ import com.aicoach.plan.GeneratedPlan.PlannedTask;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -65,6 +64,8 @@ public class PlanValidator {
                 } else if (t.date().isBefore(req.today()) || t.date().isAfter(req.taskWindowEnd())) {
                     errors.add(tLabel + " date " + t.date() + " must be between "
                             + req.today() + " and " + req.taskWindowEnd());
+                } else if (req.isBufferDay(t.date())) {
+                    errors.add(tLabel + " is on " + t.date() + ", a buffer day; buffer days must have no tasks");
                 } else {
                     minutesByDay.merge(t.date(), t.minutes(), Integer::sum);
                 }
@@ -77,8 +78,7 @@ public class PlanValidator {
                     + "the deadline " + req.deadline() + " (within " + MAX_DAYS_SHORT_OF_DEADLINE + " days)");
         }
 
-        long windowDays = ChronoUnit.DAYS.between(req.today(), req.taskWindowEnd()) + 1;
-        long available = windowDays * req.minutesPerDay();
+        long available = req.workingDays() * req.minutesPerDay();
         long minimum = Math.round(available * MIN_WINDOW_UTILIZATION);
         int planned = minutesByDay.values().stream().mapToInt(Integer::intValue).sum();
         if (taskCount > 0 && planned < minimum) {

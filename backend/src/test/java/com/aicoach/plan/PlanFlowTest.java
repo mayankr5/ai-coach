@@ -16,7 +16,10 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.aicoach.TestApi;
+
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Function;
@@ -53,11 +56,12 @@ class PlanFlowTest {
         fake.reset();
     }
 
-    /** Today: "Install JDK"; then one 45-minute task per remaining window day. */
+    /** Today: "Install JDK"; then one 45-minute task per remaining window day, except buffer days. */
     static final Function<PlanRequest, GeneratedPlan> VALID = req -> {
         List<PlannedTask> tasks = new java.util.ArrayList<>();
         tasks.add(new PlannedTask("Install JDK", req.today(), 30));
         for (LocalDate d = req.today().plusDays(1); !d.isAfter(req.taskWindowEnd()); d = d.plusDays(1)) {
+            if (req.isBufferDay(d)) continue;
             tasks.add(new PlannedTask("Practice " + d, d, 45));
         }
         return new GeneratedPlan(List.of(
@@ -78,7 +82,8 @@ class PlanFlowTest {
         mvc.perform(post(plan(goalId)).header("Authorization", bearer(token)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.milestones.length()").value(2))
-                .andExpect(jsonPath("$.milestones[0].tasks.length()").value(14))
+                // 14 window days minus the two buffer days
+                .andExpect(jsonPath("$.milestones[0].tasks.length()").value(12))
                 .andExpect(jsonPath("$.milestones[1].tasks").isEmpty());
 
         mvc.perform(get("/api/v1/goals/" + goalId + "/tasks").header("Authorization", bearer(token)))
@@ -170,7 +175,8 @@ class PlanFlowTest {
         String body = mvc.perform(post("/api/v1/goals").header("Authorization", bearer(token))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\":\"Learn Java\",\"deadline\":\"" + LocalDate.now().plusMonths(2)
-                                + "\",\"minutesPerDay\":60,\"experienceLevel\":\"BEGINNER\"}"))
+                                + "\",\"minutesPerDay\":60,\"experienceLevel\":\"BEGINNER\",\"bufferDay\":\""
+                                + TestApi.bufferDaySixDaysFrom(ZoneOffset.UTC) + "\"}"))
                 .andReturn().getResponse().getContentAsString();
         return ((Number) JsonPath.read(body, "$.id")).longValue();
     }

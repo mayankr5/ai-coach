@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -40,6 +41,11 @@ public class Goal {
     /** Allowed on top of minutesPerDay on catch-up days only; the plan itself never uses it. */
     @Column(name = "extra_minutes_per_day", nullable = false)
     private int extraMinutesPerDay;
+
+    /** Weekday kept free of planned tasks for catching up; null for goals created before buffer days. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "buffer_day")
+    private DayOfWeek bufferDay;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "experience_level", nullable = false)

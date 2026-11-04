@@ -40,10 +40,13 @@ public final class CheckInDtos {
 
     /**
      * @param completionRate (done + half of partial minutes) / reported minutes so far, null before any report
-     * @param daysBehind     extra days of work needed to reach the next milestone on time, 0 if on track
+     * @param healthPercent  time left until the next milestone at the normal daily pace (buffer days included,
+     *                       extra minutes not) as a share of the work left for it, capped at 100
+     * @param minutesBehind  work left beyond that time, 0 if on track
+     * @param daysBehind     minutesBehind in whole days of normal time
      */
     public record ProgressResponse(Long goalId, int totalTasks, int doneTasks, int partialTasks, int skippedTasks,
                                    int percentComplete, Double completionRate, NextMilestone nextMilestone,
-                                   int daysBehind, boolean onTrack) {
+                                   int healthPercent, int minutesBehind, int daysBehind, boolean onTrack) {
     }
 }

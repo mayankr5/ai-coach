@@ -113,6 +113,22 @@ class GoalFlowTest {
     }
 
     @Test
+    void bufferDayDefaultsToSundayAndCanBeChanged() throws Exception {
+        String token = registerUser(null);
+        long goalId = createGoal(token, "Learn Kafka");
+        mvc.perform(get("/api/v1/goals/" + goalId).header("Authorization", bearer(token)))
+                .andExpect(jsonPath("$.bufferDay").value("SUNDAY"));
+
+        mvc.perform(patch("/api/v1/goals/" + goalId).header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"bufferDay\":\"SATURDAY\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bufferDay").value("SATURDAY"));
+        mvc.perform(patch("/api/v1/goals/" + goalId).header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"bufferDay\":\"FUNDAY\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void unknownTimezoneIs400() throws Exception {
         mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
                         .content("""

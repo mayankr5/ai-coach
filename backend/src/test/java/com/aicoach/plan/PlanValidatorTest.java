@@ -16,7 +16,7 @@ class PlanValidatorTest {
     static final LocalDate TODAY = LocalDate.of(2026, 11, 2);
     static final LocalDate DEADLINE = TODAY.plusDays(60);
     static final PlanRequest REQ = new PlanRequest("Learn Java", null, ExperienceLevel.BEGINNER,
-            60, DEADLINE, TODAY, TODAY.plusDays(13));
+            60, DEADLINE, TODAY, TODAY.plusDays(13), null);
 
     final PlanValidator validator = new PlanValidator();
 
@@ -90,7 +90,7 @@ class PlanValidatorTest {
     @Test
     void utilizationUsesShorterWindowWhenDeadlineIsClose() {
         LocalDate deadline = TODAY.plusDays(2);
-        PlanRequest shortReq = new PlanRequest("Quick", null, ExperienceLevel.BEGINNER, 60, deadline, TODAY, deadline);
+        PlanRequest shortReq = new PlanRequest("Quick", null, ExperienceLevel.BEGINNER, 60, deadline, TODAY, deadline, null);
         GeneratedPlan plan = new GeneratedPlan(List.of(new PlannedMilestone("Done", deadline, List.of(
                 new PlannedTask("A", TODAY, 30), new PlannedTask("B", TODAY.plusDays(1), 30),
                 new PlannedTask("C", TODAY.plusDays(2), 30)))));
