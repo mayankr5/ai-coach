@@ -1,6 +1,7 @@
 # AI Coach
 
 [![Backend](https://github.com/mayankr5/ai-coach/actions/workflows/backend.yml/badge.svg)](https://github.com/mayankr5/ai-coach/actions/workflows/backend.yml)
+[![Web](https://github.com/mayankr5/ai-coach/actions/workflows/web.yml/badge.svg)](https://github.com/mayankr5/ai-coach/actions/workflows/web.yml)
 
 A to-do app where an AI coach turns a goal into a realistic plan and adjusts it daily based on what you actually did.
 
