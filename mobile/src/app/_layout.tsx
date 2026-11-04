@@ -1,16 +1,16 @@
-import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { focusManager } from '@tanstack/react-query'
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
 import { Stack } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
 import { StatusBar } from 'expo-status-bar'
 import { useEffect } from 'react'
 import { AppState, Platform } from 'react-native'
+import { persistOptions, queryClient } from '../api/queryClient'
 import { AuthProvider } from '../auth/AuthProvider'
 import { useAuth } from '../auth/useAuth'
 import { colors } from '../theme'
 
 SplashScreen.preventAutoHideAsync()
-
-const queryClient = new QueryClient()
 
 // Coming back to the app counts as focus, so stale data (e.g. yesterday's tasks) refetches
 if (Platform.OS !== 'web') {
@@ -19,12 +19,12 @@ if (Platform.OS !== 'web') {
 
 export default function RootLayout() {
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
       <AuthProvider>
         <StatusBar style="dark" />
         <Routes />
       </AuthProvider>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   )
 }
 

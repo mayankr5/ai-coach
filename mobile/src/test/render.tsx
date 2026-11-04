@@ -4,9 +4,12 @@ import type { ReactElement } from 'react'
 import { tokens } from '../api/tokens'
 import { AuthProvider } from '../auth/AuthProvider'
 
-/** Renders {@code screen} with a fresh query cache and the auth provider, as the app's root layout does. */
-export async function renderScreen(screen: ReactElement) {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+export function testQueryClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false } } })
+}
+
+/** Renders {@code screen} with the auth provider, as the root layout does; {@code queryClient} may hold saved data. */
+export async function renderScreen(screen: ReactElement, queryClient = testQueryClient()) {
   return await render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider>{screen}</AuthProvider>

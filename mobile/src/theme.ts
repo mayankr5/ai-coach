@@ -14,6 +14,10 @@ export const colors = {
   dangerBackground: '#fef2f2',
   warning: '#b45309',
   success: '#047857',
+  done: '#059669',
+  partial: '#f59e0b',
+  skipped: '#475569',
+  coachMuted: '#c7d2fe',
 } as const
 
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const

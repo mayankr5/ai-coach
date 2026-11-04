@@ -98,10 +98,13 @@ export async function call<T>(request: Promise<{ data?: T; error?: unknown; resp
     problem.errors ?? {})
 }
 
+/** True when the request never reached the server: no connection, or the server is down. */
+export function isNetworkError(e: unknown): boolean {
+  return e instanceof TypeError && /network request failed|failed to fetch/i.test(e.message)
+}
+
 /** A message to show the user for any thrown value; a failed fetch on a phone usually means no connection. */
 export function messageOf(e: unknown): string {
-  if (e instanceof TypeError && /network request failed|failed to fetch/i.test(e.message)) {
-    return 'Can’t reach the server. Check your connection and try again.'
-  }
+  if (isNetworkError(e)) return 'Can’t reach the server. Check your connection and try again.'
   return e instanceof Error ? e.message : 'Something went wrong. Please try again.'
 }

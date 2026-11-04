@@ -1,3 +1,5 @@
+import AsyncStorage from '@react-native-async-storage/async-storage'
+
 // Native modules don't exist under Jest: secure storage becomes an in-memory map, the time zone is fixed
 const mockStore = new Map<string, string>()
 
@@ -37,3 +39,14 @@ jest.mock('@react-native-community/datetimepicker', () => ({
 }))
 
 afterEach(() => jest.clearAllMocks())
+
+jest.mock('@react-native-async-storage/async-storage', () =>
+  jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'))
+
+jest.mock('expo-haptics', () => ({
+  selectionAsync: jest.fn(async () => undefined),
+  notificationAsync: jest.fn(async () => undefined),
+  NotificationFeedbackType: { Success: 'success' },
+}))
+
+afterEach(() => AsyncStorage.clear())

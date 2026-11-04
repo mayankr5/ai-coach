@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import {
-  ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput,
+  View,
   type TextInputProps,
 } from 'react-native'
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context'
@@ -54,12 +55,23 @@ export function Spinner({ label = 'Loading' }: { label?: string }) {
  * A scrolling screen that keeps focused inputs above the keyboard. Screens under a header only need the bottom
  * inset; ones without (login) pass the top too.
  */
-export function Screen({ children, edges = ['bottom'] }: { children: ReactNode; edges?: Edge[] }) {
+export function Screen({ children, edges = ['bottom'], onRefresh }: {
+  children: ReactNode; edges?: Edge[]; onRefresh?: () => Promise<unknown>
+}) {
+  const [refreshing, setRefreshing] = useState(false)
+  const refresh = onRefresh && (() => {
+    setRefreshing(true)
+    onRefresh().finally(() => setRefreshing(false))
+  })
   return (
     <SafeAreaView style={styles.screen} edges={edges}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled"
-          contentInsetAdjustmentBehavior="automatic">{children}</ScrollView>
+          contentInsetAdjustmentBehavior="automatic"
+          refreshControl={refresh && <RefreshControl refreshing={refreshing} onRefresh={refresh}
+            tintColor={colors.primary} />}>
+          {children}
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   )

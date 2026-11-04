@@ -4,6 +4,7 @@ import { Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } fr
 import { messageOf } from '../api/client'
 import { useGoals, type GoalStatus } from '../api/goals'
 import { useAuth } from '../auth/useAuth'
+import { SavedDataNote } from '../components/SavedDataNote'
 import { Button, ErrorMessage, Segmented, Spinner, type Choice } from '../components/ui'
 import { deadlineLabel, formatDay } from '../dates'
 import { colors, radius, space } from '../theme'
@@ -41,7 +42,8 @@ export default function GoalsScreen() {
         ListHeaderComponent={
           <View style={styles.header}>
             <Segmented label="Goal status" choices={TABS} value={status} onChange={setStatus} />
-            {goals.isError && <ErrorMessage>{messageOf(goals.error)}</ErrorMessage>}
+            <SavedDataNote queries={[goals]} />
+            {goals.isError && !goals.data && <ErrorMessage>{messageOf(goals.error)}</ErrorMessage>}
           </View>
         }
         ListEmptyComponent={goals.isPending ? <Spinner label="Loading goals" />
