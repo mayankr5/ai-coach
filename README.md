@@ -1,5 +1,7 @@
 # AI Coach
 
+[![Backend](https://github.com/mayankr5/ai-coach/actions/workflows/backend.yml/badge.svg)](https://github.com/mayankr5/ai-coach/actions/workflows/backend.yml)
+
 A to-do app where an AI coach turns a goal into a realistic plan and adjusts it daily based on what you actually did.
 
 ```
@@ -19,7 +21,7 @@ cd backend && ./mvnw spring-boot:run
 - API docs: http://localhost:8080/swagger-ui.html
 - Health:   http://localhost:8080/actuator/health
 
-Tests use Testcontainers, so Docker must be running: `cd backend && ./mvnw test`.
+Tests use Testcontainers, so Docker must be running: `cd backend && ./mvnw test`. GitHub Actions runs them on every push to `main` and every pull request that touches `backend/`.
 
 ## API (v1)
 
