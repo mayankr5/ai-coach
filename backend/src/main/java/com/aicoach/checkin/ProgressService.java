@@ -53,7 +53,7 @@ public class ProgressService {
                 health.percent(), health.minutesBehind(), daysBehind, health.minutesBehind() == 0);
     }
 
-    record Health(int percent, int minutesBehind) {
+    public record Health(int percent, int minutesBehind) {
         static final Health ON_TRACK = new Health(100, 0);
     }
 
@@ -62,7 +62,7 @@ public class ProgressService {
      * Every day counts at the normal daily time, buffer days included (that is what they are for); extra
      * minutes don't, as they are meant for short bursts, not every day.
      */
-    static Health health(Goal goal, List<Task> all, Milestone next, LocalDate today) {
+    public static Health health(Goal goal, List<Task> all, Milestone next, LocalDate today) {
         long work = all.stream()
                 .filter(t -> t.getStatus() == TaskStatus.PENDING && !t.getScheduledDate().isBefore(today))
                 .filter(t -> t.getMilestone() != null && t.getMilestone().getPosition() <= next.getPosition())

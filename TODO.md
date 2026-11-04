@@ -21,8 +21,11 @@ Tasks are treated as a series, so leftover work must come first, not land weeks 
   - Working days planned to 90% instead of 80%, so weekly planned time stays about the same
   - Progress shows `healthPercent` and `minutesBehind` for the next milestone (buffer days count, extra time doesn't)
 - [ ] **Stage 3 — plan no longer fits (health < 100%)**
-  - Offer choices: extend deadline / more daily time (code calculates) / cut scope (AI suggests) / re-plan
-  - New endpoint to apply the chosen option
+  - [x] `GET /adjustments` previews; extend moves the milestone, later ones and the deadline; more time picks the
+        smallest daily time at which a re-pack fits the milestone's tasks, then re-packs from tomorrow
+  - [ ] Cut scope: AI suggests tasks to drop with reasons, user confirms, code re-packs
+  - [ ] Web: "Get back on track" panel
+  - [ ] Later: start a fresh plan from tomorrow
 - [ ] **Stage 4 — pattern detection**
   - Missed ≥ 3 of the last 7 days → suggest a lighter plan
   - Repeatedly skipped heavy days → suggest lowering extra time

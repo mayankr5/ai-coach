@@ -52,6 +52,9 @@ cd web && npm install && npm run dev   # http://localhost:5173, needs the backen
 | GET  | `/api/v1/goals/{id}/plan` (milestones with their tasks) | Bearer token |
 | POST | `/api/v1/goals/{id}/plan` (AI-generated; 409 once progress exists, 502 on AI failure) | Bearer token |
 | POST | `/api/v1/goals/{id}/plan/extend` (plan the week after the last task; 409 at the deadline or 28+ days ahead) | Bearer token |
+| GET  | `/api/v1/goals/{id}/adjustments` (how far behind the next milestone, and what each fix would change) | Bearer token |
+| POST | `/api/v1/goals/{id}/adjustments/extend` `{days}` (move the milestone, later ones and the deadline) | Bearer token |
+| POST | `/api/v1/goals/{id}/adjustments/more-time` `{minutesPerDay}` (raise daily time, re-pack upcoming tasks) | Bearer token |
 
 ## AI models
 

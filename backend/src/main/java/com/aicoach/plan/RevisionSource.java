@@ -10,5 +10,7 @@ public enum RevisionSource {
     /** Rule-based re-plan by the nightly job for a day with no check-in. */
     NIGHTLY,
     /** One more week of tasks, so the plan doesn't run out. */
-    EXTENDED
+    EXTENDED,
+    /** The user picked a way back on track (more days, more daily time or less work). */
+    ADJUSTED
 }
