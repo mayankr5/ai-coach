@@ -386,13 +386,6 @@ export interface components {
             displayName: string;
             timezone: string;
         };
-        Pageable: {
-            /** Format: int32 */
-            page?: number;
-            /** Format: int32 */
-            size?: number;
-            sort?: string[];
-        };
         GoalSummary: {
             /** Format: int64 */
             id: number;
@@ -478,9 +471,14 @@ export type $defs = Record<string, never>;
 export interface operations {
     list: {
         parameters: {
-            query: {
+            query?: {
                 status?: "ACTIVE" | "COMPLETED" | "ARCHIVED";
-                pageable: components["schemas"]["Pageable"];
+                /** @description Zero-based page index (0..N) */
+                page?: number;
+                /** @description The size of the page to be returned */
+                size?: number;
+                /** @description Sorting criteria in the format: property,(asc|desc). Default sort order is ascending. Multiple sort criteria are supported. */
+                sort?: string[];
             };
             header?: never;
             path?: never;
@@ -494,7 +492,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["PageResponseGoalSummary"];
+                    "application/json": components["schemas"]["PageResponseGoalSummary"];
                 };
             };
         };
@@ -518,7 +516,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["GoalResponse"];
+                    "application/json": components["schemas"]["GoalResponse"];
                 };
             };
         };
@@ -540,7 +538,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["PlanResponse"];
+                    "application/json": components["schemas"]["PlanResponse"];
                 };
             };
         };
@@ -562,7 +560,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["PlanResponse"];
+                    "application/json": components["schemas"]["PlanResponse"];
                 };
             };
         };
@@ -584,15 +582,20 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ExtensionResponse"];
+                    "application/json": components["schemas"]["ExtensionResponse"];
                 };
             };
         };
     };
     history: {
         parameters: {
-            query: {
-                pageable: components["schemas"]["Pageable"];
+            query?: {
+                /** @description Zero-based page index (0..N) */
+                page?: number;
+                /** @description The size of the page to be returned */
+                size?: number;
+                /** @description Sorting criteria in the format: property,(asc|desc). Default sort order is ascending. Multiple sort criteria are supported. */
+                sort?: string[];
             };
             header?: never;
             path: {
@@ -608,7 +611,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["PageResponseCheckInSummary"];
+                    "application/json": components["schemas"]["PageResponseCheckInSummary"];
                 };
             };
         };
@@ -634,7 +637,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["CheckInResponse"];
+                    "application/json": components["schemas"]["CheckInResponse"];
                 };
             };
         };
@@ -658,7 +661,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["TokenResponse"];
+                    "application/json": components["schemas"]["TokenResponse"];
                 };
             };
         };
@@ -682,7 +685,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["TokenResponse"];
+                    "application/json": components["schemas"]["TokenResponse"];
                 };
             };
         };
@@ -728,7 +731,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["TokenResponse"];
+                    "application/json": components["schemas"]["TokenResponse"];
                 };
             };
         };
@@ -754,7 +757,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["TaskResponse"];
+                    "application/json": components["schemas"]["TaskResponse"];
                 };
             };
         };
@@ -776,7 +779,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["GoalResponse"];
+                    "application/json": components["schemas"]["GoalResponse"];
                 };
             };
         };
@@ -822,7 +825,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["GoalResponse"];
+                    "application/json": components["schemas"]["GoalResponse"];
                 };
             };
         };
@@ -842,7 +845,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["UserResponse"];
+                    "application/json": components["schemas"]["UserResponse"];
                 };
             };
         };
@@ -868,7 +871,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["TaskResponse"][];
+                    "application/json": components["schemas"]["TaskResponse"][];
                 };
             };
         };
@@ -890,7 +893,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ProgressResponse"];
+                    "application/json": components["schemas"]["ProgressResponse"];
                 };
             };
         };

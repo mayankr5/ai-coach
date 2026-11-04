@@ -4,6 +4,7 @@ import com.aicoach.common.PageResponse;
 import com.aicoach.goal.GoalDtos.*;
 import com.aicoach.security.AuthUser;
 import jakarta.validation.Valid;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -30,6 +31,7 @@ public class GoalController {
     @GetMapping
     public PageResponse<GoalSummary> list(@AuthenticationPrincipal AuthUser user,
                                           @RequestParam(required = false) GoalStatus status,
+                                          @ParameterObject
                                           @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
                                           Pageable pageable) {
         return goalService.list(user.id(), status, pageable);

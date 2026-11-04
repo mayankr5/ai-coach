@@ -4,6 +4,7 @@ import com.aicoach.checkin.CheckInDtos.*;
 import com.aicoach.common.PageResponse;
 import com.aicoach.security.AuthUser;
 import jakarta.validation.Valid;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -30,7 +31,7 @@ public class CheckInController {
 
     @GetMapping("/check-ins")
     public PageResponse<CheckInSummary> history(@AuthenticationPrincipal AuthUser user, @PathVariable Long goalId,
-                                                @PageableDefault(size = 30, sort = "checkInDate",
+                                                @ParameterObject @PageableDefault(size = 30, sort = "checkInDate",
                                                         direction = Sort.Direction.DESC) Pageable pageable) {
         return checkInService.history(user.id(), goalId, pageable);
     }
