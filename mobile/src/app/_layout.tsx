@@ -47,7 +47,8 @@ function Routes() {
       <Stack.Protected guard={user !== null}>
         <Stack.Screen name="index" options={{ title: 'Your goals' }} />
         <Stack.Screen name="goals/new" options={{ presentation: 'modal', title: 'New goal' }} />
-        <Stack.Screen name="goals/[id]" options={{ title: 'Goal', headerBackTitle: 'Goals' }} />
+        <Stack.Screen name="goals/[id]/index" options={{ title: 'Goal', headerBackTitle: 'Goals' }} />
+        <Stack.Screen name="goals/[id]/cut" options={{ presentation: 'modal', title: 'Drop some tasks' }} />
       </Stack.Protected>
       <Stack.Protected guard={user === null}>
         <Stack.Screen name="login" options={{ headerShown: false }} />

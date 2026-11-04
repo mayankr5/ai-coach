@@ -1,7 +1,7 @@
 import { screen, userEvent, waitFor } from '@testing-library/react-native'
 import { useLocalSearchParams } from 'expo-router'
 import { goalKeys } from '../api/goals'
-import GoalScreen from '../app/goals/[id]'
+import GoalScreen from '../app/goals/[id]/index'
 import { addDays, today, toIsoDate } from '../dates'
 import { json, loggedIn, pathOf, renderScreen, testQueryClient } from '../test/render'
 
@@ -93,7 +93,7 @@ describe('GoalScreen', () => {
     await renderScreen(<GoalScreen />)
 
     expect(await screen.findByText('Finish the setup first.')).toBeOnTheScreen()
-    expect(screen.getByRole('button', { name: 'Update check-in' })).toBeOnTheScreen()
+    expect(await screen.findByRole('button', { name: 'Update check-in' })).toBeOnTheScreen()
     expect(await screen.findByText('Learn classes')).toBeOnTheScreen()
     expect(screen.getAllByText('Nothing planned')).toHaveLength(6)
     expect(await screen.findByText('183 min behind')).toBeOnTheScreen()

@@ -1,18 +1,19 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { Stack, useLocalSearchParams } from 'expo-router'
 import { StyleSheet, Text, View } from 'react-native'
-import { messageOf } from '../../api/client'
-import { goalKeys, useGoal } from '../../api/goals'
-import { useLastCheckIn, usePlan, useProgress } from '../../api/plan'
-import { GeneratePlan } from '../../components/goal/GeneratePlan'
-import { Milestones } from '../../components/goal/Milestones'
-import { ProgressCard } from '../../components/goal/ProgressCard'
-import { TodayCard } from '../../components/goal/TodayCard'
-import { UpcomingDays } from '../../components/goal/UpcomingDays'
-import { SavedDataNote } from '../../components/SavedDataNote'
-import { ErrorMessage, Screen, Spinner } from '../../components/ui'
-import { deadlineLabel, formatDay, today, toIsoDate } from '../../dates'
-import { colors, radius, space } from '../../theme'
+import { messageOf } from '../../../api/client'
+import { goalKeys, useGoal } from '../../../api/goals'
+import { useLastCheckIn, usePlan, useProgress } from '../../../api/plan'
+import { BackOnTrack } from '../../../components/goal/BackOnTrack'
+import { GeneratePlan } from '../../../components/goal/GeneratePlan'
+import { Milestones } from '../../../components/goal/Milestones'
+import { ProgressCard } from '../../../components/goal/ProgressCard'
+import { TodayCard } from '../../../components/goal/TodayCard'
+import { UpcomingDays } from '../../../components/goal/UpcomingDays'
+import { SavedDataNote } from '../../../components/SavedDataNote'
+import { ErrorMessage, Screen, Spinner } from '../../../components/ui'
+import { deadlineLabel, formatDay, today, toIsoDate } from '../../../dates'
+import { colors, radius, space } from '../../../theme'
 
 /** The daily screen: the coach's last reply, today's check-in, then the week, progress and milestones. */
 export default function GoalScreen() {
@@ -56,6 +57,7 @@ export default function GoalScreen() {
               <TodayCard goalId={goalId} checkedIn={last?.date === toIsoDate(today())} />
               <UpcomingDays goalId={goalId} bufferDay={g.bufferDay} />
               <ProgressCard goalId={goalId} />
+              <BackOnTrack goalId={goalId} />
               <Milestones milestones={plan.data.milestones} />
             </>
           )}
