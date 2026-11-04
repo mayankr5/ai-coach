@@ -68,6 +68,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/goals/{goalId}/adjustments/more-time": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["moreTime"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/goals/{goalId}/adjustments/extend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["extend_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/goals/{goalId}/adjustments/cut-scope": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cut"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/goals/{goalId}/adjustments/cut-scope/suggest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["suggestCut"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/register": {
         parameters: {
             query?: never;
@@ -212,6 +276,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/goals/{goalId}/adjustments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["options"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -330,8 +410,67 @@ export interface components {
             note: string | null;
             coachMessage: string;
             /** @enum {string} */
-            replanSource: "INITIAL" | "AI" | "FALLBACK" | "NIGHTLY" | "EXTENDED";
+            replanSource: "INITIAL" | "AI" | "FALLBACK" | "NIGHTLY" | "EXTENDED" | "ADJUSTED";
             upcomingTasks: components["schemas"]["TaskResponse"][];
+        };
+        MoreTimeRequest: {
+            /** Format: int32 */
+            minutesPerDay: number;
+        };
+        AdjustmentOptions: {
+            /** Format: int32 */
+            minutesBehind: number;
+            /** Format: int32 */
+            healthPercent: number;
+            milestone: components["schemas"]["NextMilestone"] | null;
+            extend: components["schemas"]["ExtendOption"] | null;
+            moreTime: components["schemas"]["MoreTimeOption"] | null;
+        };
+        ExtendOption: {
+            /** Format: int32 */
+            days: number;
+            /** Format: date */
+            milestoneDate: string;
+            /** Format: date */
+            deadline: string;
+        };
+        MoreTimeOption: {
+            /** Format: int32 */
+            minutesPerDay: number;
+            /** Format: int32 */
+            currentMinutesPerDay: number;
+            realistic: boolean;
+        };
+        NextMilestone: {
+            /** Format: int64 */
+            id: number;
+            title: string;
+            /** Format: date */
+            targetDate: string;
+        };
+        ExtendRequest: {
+            /** Format: int32 */
+            days: number;
+        };
+        CutScopeRequest: {
+            taskIds: number[];
+        };
+        CutSuggestion: {
+            /** Format: int32 */
+            minutesBehind: number;
+            /** Format: int32 */
+            minutesFreed: number;
+            tasks: components["schemas"]["SuggestedCut"][];
+        };
+        SuggestedCut: {
+            /** Format: int64 */
+            taskId: number;
+            title: string;
+            /** Format: int32 */
+            minutes: number;
+            /** Format: date */
+            scheduledDate: string;
+            reason: string;
         };
         RegisterRequest: {
             /** Format: email */
@@ -407,13 +546,6 @@ export interface components {
             totalElements: number;
             /** Format: int32 */
             totalPages: number;
-        };
-        NextMilestone: {
-            /** Format: int64 */
-            id: number;
-            title: string;
-            /** Format: date */
-            targetDate: string;
         };
         ProgressResponse: {
             /** Format: int64 */
@@ -638,6 +770,106 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CheckInResponse"];
+                };
+            };
+        };
+    };
+    moreTime: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                goalId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MoreTimeRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdjustmentOptions"];
+                };
+            };
+        };
+    };
+    extend_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                goalId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExtendRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdjustmentOptions"];
+                };
+            };
+        };
+    };
+    cut: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                goalId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CutScopeRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdjustmentOptions"];
+                };
+            };
+        };
+    };
+    suggestCut: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                goalId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CutSuggestion"];
                 };
             };
         };
@@ -894,6 +1126,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProgressResponse"];
+                };
+            };
+        };
+    };
+    options: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                goalId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdjustmentOptions"];
                 };
             };
         };

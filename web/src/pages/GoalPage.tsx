@@ -2,6 +2,7 @@ import { useParams } from 'react-router'
 import { messageOf } from '../api/client'
 import { useGoal } from '../api/goals'
 import { useLastCheckIn, usePlan } from '../api/plan'
+import { BackOnTrack } from '../components/goal/BackOnTrack'
 import { GeneratePlan } from '../components/goal/GeneratePlan'
 import { Milestones } from '../components/goal/Milestones'
 import { ProgressCard } from '../components/goal/ProgressCard'
@@ -49,6 +50,7 @@ export function GoalPage() {
             </div>
             <div className="space-y-6">
               <ProgressCard goalId={goalId} />
+              <BackOnTrack goalId={goalId} />
               <Milestones milestones={plan.data.milestones} />
             </div>
           </div>

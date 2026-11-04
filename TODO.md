@@ -25,7 +25,7 @@ Tasks are treated as a series, so leftover work must come first, not land weeks 
         smallest daily time at which a re-pack fits the milestone's tasks, then re-packs from tomorrow
   - [x] Cut scope: AI ranks upcoming tasks by how safely they can go (with reasons), code takes them in order
         until enough time is freed, the user confirms, code drops them and re-packs
-  - [ ] Web: "Get back on track" panel
+  - [x] Web: "Get back on track" panel (shown while behind; each fix previewed, applied only on confirm)
   - [ ] Later: start a fresh plan from tomorrow
 - [ ] **Stage 4 — pattern detection**
   - Missed ≥ 3 of the last 7 days → suggest a lighter plan
