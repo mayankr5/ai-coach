@@ -52,24 +52,9 @@ public class PlanValidator {
                 previousTarget = m.targetDate();
             }
 
-            for (PlannedTask t : m.tasks() == null ? List.<PlannedTask>of() : m.tasks()) {
-                taskCount++;
-                String tLabel = label + " task '" + t.title() + "'";
-                checkTitle(t.title(), tLabel, errors);
-                if (t.minutes() < 5 || t.minutes() > req.minutesPerDay()) {
-                    errors.add(tLabel + " is " + t.minutes() + " minutes; must be 5-" + req.minutesPerDay());
-                }
-                if (t.date() == null) {
-                    errors.add(tLabel + " has no date");
-                } else if (t.date().isBefore(req.today()) || t.date().isAfter(req.taskWindowEnd())) {
-                    errors.add(tLabel + " date " + t.date() + " must be between "
-                            + req.today() + " and " + req.taskWindowEnd());
-                } else if (req.isBufferDay(t.date())) {
-                    errors.add(tLabel + " is on " + t.date() + ", a buffer day; buffer days must have no tasks");
-                } else {
-                    minutesByDay.merge(t.date(), t.minutes(), Integer::sum);
-                }
-            }
+            List<PlannedTask> tasks = m.tasks() == null ? List.of() : m.tasks();
+            taskCount += tasks.size();
+            checkTasks(tasks, label + " task ", req, errors, minutesByDay);
         }
 
         if (previousTarget != null
@@ -77,7 +62,51 @@ public class PlanValidator {
             errors.add("The last milestone ends on " + previousTarget + "; milestones must cover the goal up to "
                     + "the deadline " + req.deadline() + " (within " + MAX_DAYS_SHORT_OF_DEADLINE + " days)");
         }
+        checkWindow(taskCount, minutesByDay, req, errors);
+        return errors;
+    }
 
+    /**
+     * A week of tasks added to an existing plan: the same task rules as a full plan, with {@code window}'s
+     * today and taskWindowEnd as the week's first and last day.
+     */
+    public List<String> validateWeek(PlannedWeek week, PlanRequest window) {
+        List<PlannedTask> tasks = week == null || week.tasks() == null ? List.of() : week.tasks();
+        List<String> errors = new ArrayList<>();
+        Map<LocalDate, Integer> minutesByDay = new TreeMap<>();
+        checkTasks(tasks, "Task ", window, errors, minutesByDay);
+        checkWindow(tasks.size(), minutesByDay, window, errors);
+        return errors;
+    }
+
+    private static void checkTasks(List<PlannedTask> tasks, String labelPrefix, PlanRequest req, List<String> errors,
+                                   Map<LocalDate, Integer> minutesByDay) {
+        for (PlannedTask t : tasks) {
+            if (t == null) {
+                errors.add(labelPrefix.strip() + " is empty");
+                continue;
+            }
+            String tLabel = labelPrefix + "'" + t.title() + "'";
+            checkTitle(t.title(), tLabel, errors);
+            if (t.minutes() < 5 || t.minutes() > req.minutesPerDay()) {
+                errors.add(tLabel + " is " + t.minutes() + " minutes; must be 5-" + req.minutesPerDay());
+            }
+            if (t.date() == null) {
+                errors.add(tLabel + " has no date");
+            } else if (t.date().isBefore(req.today()) || t.date().isAfter(req.taskWindowEnd())) {
+                errors.add(tLabel + " date " + t.date() + " must be between "
+                        + req.today() + " and " + req.taskWindowEnd());
+            } else if (req.isBufferDay(t.date())) {
+                errors.add(tLabel + " is on " + t.date() + ", a buffer day; buffer days must have no tasks");
+            } else {
+                minutesByDay.merge(t.date(), t.minutes(), Integer::sum);
+            }
+        }
+    }
+
+    /** Enough work in the window, and no day over the limit. */
+    private static void checkWindow(int taskCount, Map<LocalDate, Integer> minutesByDay, PlanRequest req,
+                                    List<String> errors) {
         long available = req.workingDays() * req.minutesPerDay();
         long minimum = Math.round(available * MIN_WINDOW_UTILIZATION);
         int planned = minutesByDay.values().stream().mapToInt(Integer::intValue).sum();
@@ -94,7 +123,6 @@ public class PlanValidator {
                 errors.add(day + " has " + total + " minutes of tasks; the limit is " + req.minutesPerDay());
             }
         });
-        return errors;
     }
 
     private static void checkTitle(String title, String label, List<String> errors) {

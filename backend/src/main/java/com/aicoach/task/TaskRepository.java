@@ -38,6 +38,9 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
 
     List<Task> findByGoalIdAndScheduledDateBetween(Long goalId, LocalDate from, LocalDate to);
 
+    @Query("select max(t.scheduledDate) from Task t where t.goal.id = :goalId")
+    Optional<LocalDate> findLastScheduledDate(Long goalId);
+
     /** Highest sequence number on or before a day, so a task moved there can go last on it. */
     @Query("select coalesce(max(t.sequence), 0) from Task t where t.goal.id = :goalId and t.scheduledDate <= :date")
     int maxSequenceUntil(Long goalId, LocalDate date);

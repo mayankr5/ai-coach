@@ -5,6 +5,7 @@ import com.aicoach.checkin.CheckInDtos.ProgressResponse;
 import com.aicoach.goal.Goal;
 import com.aicoach.goal.GoalService;
 import com.aicoach.goal.Milestone;
+import com.aicoach.task.Completion;
 import com.aicoach.task.Task;
 import com.aicoach.task.TaskRepository;
 import com.aicoach.task.TaskStatus;
@@ -39,15 +40,7 @@ public class ProgressService {
         int skipped = count(all, TaskStatus.SKIPPED);
         int percent = all.isEmpty() ? 0 : (int) Math.round(100.0 * done / all.size());
 
-        double reported = 0;
-        double achieved = 0;
-        for (Task t : all) {
-            if (t.getStatus() == TaskStatus.PENDING) continue;
-            reported += t.getEstimatedMinutes();
-            if (t.getStatus() == TaskStatus.DONE) achieved += t.getEstimatedMinutes();
-            if (t.getStatus() == TaskStatus.PARTIAL) achieved += t.getEstimatedMinutes() / 2.0;
-        }
-        Double completionRate = reported == 0 ? null : achieved / reported;
+        Double completionRate = Completion.rate(all);
 
         Milestone next = goal.getMilestones().stream()
                 .filter(m -> !m.getTargetDate().isBefore(today))

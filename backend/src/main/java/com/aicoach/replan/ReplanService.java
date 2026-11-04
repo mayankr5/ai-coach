@@ -12,6 +12,7 @@ import com.aicoach.plan.RevisionSource;
 import com.aicoach.replan.PlanChanges.TaskChange;
 import com.aicoach.replan.RePlanRequest.MilestoneView;
 import com.aicoach.replan.RePlanRequest.TaskView;
+import com.aicoach.task.Completion;
 import com.aicoach.task.Task;
 import com.aicoach.task.TaskRepository;
 import com.aicoach.task.TaskStatus;
@@ -150,19 +151,10 @@ public class ReplanService {
                 .toList();
     }
 
-    /** (done minutes + half of partial minutes) / all minutes reported over the lookback period. */
+    /** Over the lookback period before the re-plan. */
     private Double completionRate(Long goalId, LocalDate from) {
-        List<Task> recent = tasks.findByGoalIdAndScheduledDateBetween(goalId,
-                from.minusDays(COMPLETION_LOOKBACK_DAYS), from.minusDays(1));
-        double total = 0;
-        double done = 0;
-        for (Task t : recent) {
-            if (t.getStatus() == TaskStatus.PENDING) continue;
-            total += t.getEstimatedMinutes();
-            if (t.getStatus() == TaskStatus.DONE) done += t.getEstimatedMinutes();
-            if (t.getStatus() == TaskStatus.PARTIAL) done += t.getEstimatedMinutes() / 2.0;
-        }
-        return total == 0 ? null : done / total;
+        return Completion.rate(tasks.findByGoalIdAndScheduledDateBetween(goalId,
+                from.minusDays(COMPLETION_LOOKBACK_DAYS), from.minusDays(1)));
     }
 
     private void apply(Goal goal, RePlanRequest request, PlanChanges changes, RevisionSource source, String model) {

@@ -52,7 +52,8 @@ Tasks are treated as a series, so leftover work must come first, not land weeks 
 ## Later
 - [ ] Circuit breaker (Resilience4j): skip a model for a few minutes after repeated failures instead of
       waiting for its timeout on every request
-- [ ] Fill new days as the 14-day window moves (maybe covered by Stage 1 shifting; re-check after it)
+- [x] Fill new days as the 14-day window moves: the nightly job plans the next week when < 7 days are left
+      (also `POST /goals/{id}/plan/extend`)
 - [x] Today is not frozen for a late check-in: re-plans (check-ins and the nightly job) now start tomorrow
 - [ ] Optional: one task row per piece of work (`remainingMinutes` + a `task_log` history table)
       instead of "Finish: X" copies

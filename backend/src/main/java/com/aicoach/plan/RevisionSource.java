@@ -8,5 +8,7 @@ public enum RevisionSource {
     /** Rule-based re-plan because the AI failed or returned invalid changes. */
     FALLBACK,
     /** Rule-based re-plan by the nightly job for a day with no check-in. */
-    NIGHTLY
+    NIGHTLY,
+    /** One more week of tasks, so the plan doesn't run out. */
+    EXTENDED
 }

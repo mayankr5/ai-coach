@@ -43,6 +43,7 @@ Tests use Testcontainers, so Docker must be running: `cd backend && ./mvnw test`
 | GET  | `/api/v1/goals/{id}/check-ins` | Bearer token |
 | GET  | `/api/v1/goals/{id}/progress` | Bearer token |
 | POST | `/api/v1/goals/{id}/plan` (AI-generated; 409 once progress exists, 502 on AI failure) | Bearer token |
+| POST | `/api/v1/goals/{id}/plan/extend` (plan the week after the last task; 409 at the deadline or 28+ days ahead) | Bearer token |
 
 ## AI models
 
@@ -68,6 +69,8 @@ GEMINI_API_KEY=your-key
 ```
 
 After each check-in, `CatchUpScheduler` (plain code) puts leftover work first on the next day and shifts later tasks forward in order, using the goal's `extraMinutesPerDay` on catch-up days. Tasks form one series (`sequence`, spaced by 1000): the scheduler walks them in that order, a catch-up task takes the number right after the task it continues, and every task list is sorted by day, then sequence. Each goal has a weekly `bufferDay` (default Sunday) with no planned tasks: while catching up, work flows into it and the shifting stops there. `GET /goals/{id}/progress` reports `healthPercent` and `minutesBehind` for the next milestone. Re-plans never change today: they start tomorrow, and heavy days already planned count towards the limit of 2 extra-time days in a row. The AI only writes the coach message; if it is down, a fixed message is used, so check-ins never fail. A nightly job (`MISSED_DAY_CRON`, default 03:00 UTC) marks overdue tasks as skipped for goals with no check-in and re-plans them without calling the AI.
+
+A new plan has tasks for the next 14 days; the nightly job plans one more week (`PlanExtender`) whenever fewer than 7 days are left, using what's done and still pending as context. Goals with no check-in for 14 days aren't extended.
 
 Every plan is checked by `PlanValidator` (dates, daily minute limit, milestone order) whatever the model.
 

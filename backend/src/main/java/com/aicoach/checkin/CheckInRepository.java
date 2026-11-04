@@ -13,5 +13,7 @@ public interface CheckInRepository extends JpaRepository<CheckIn, Long> {
 
     boolean existsByGoalIdAndCheckInDate(Long goalId, LocalDate date);
 
+    Optional<CheckIn> findFirstByGoalIdOrderByCheckInDateDesc(Long goalId);
+
     Page<CheckIn> findByGoalId(Long goalId, Pageable pageable);
 }

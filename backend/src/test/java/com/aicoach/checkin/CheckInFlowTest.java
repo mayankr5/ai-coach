@@ -2,6 +2,7 @@ package com.aicoach.checkin;
 
 import com.aicoach.TestcontainersConfiguration;
 import com.aicoach.plan.FakePlanGenerator;
+import com.aicoach.plan.FakeWeekPlanner;
 import com.aicoach.plan.GeneratedPlan;
 import com.aicoach.plan.GeneratedPlan.PlannedMilestone;
 import com.aicoach.plan.GeneratedPlan.PlannedTask;
@@ -53,6 +54,13 @@ class CheckInFlowTest {
         @Primary
         FakePlanGenerator fakePlanGenerator() {
             return new FakePlanGenerator();
+        }
+
+        /** Never asked in these tests; fails like an unavailable AI if the nightly job finds a plan running low. */
+        @Bean
+        @Primary
+        FakeWeekPlanner fakeWeekPlanner() {
+            return new FakeWeekPlanner();
         }
 
         @Bean

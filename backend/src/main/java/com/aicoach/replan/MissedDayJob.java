@@ -4,6 +4,8 @@ import com.aicoach.checkin.CheckInRepository;
 import com.aicoach.goal.Goal;
 import com.aicoach.goal.GoalRepository;
 import com.aicoach.goal.GoalStatus;
+import com.aicoach.plan.AiUnavailableException;
+import com.aicoach.plan.PlanExtender;
 import com.aicoach.task.Task;
 import com.aicoach.task.TaskRepository;
 import com.aicoach.task.TaskStatus;
@@ -18,9 +20,10 @@ import java.time.ZoneId;
 import java.util.List;
 
 /**
- * Nightly: for every active goal with no check-in yesterday (in the user's timezone), marks
- * overdue pending tasks as skipped and re-plans with the rule-based planner, so a forgotten
- * check-in doesn't leave the plan stuck in the past.
+ * Nightly, for every active goal: with no check-in yesterday (in the user's timezone), marks overdue pending
+ * tasks as skipped and re-plans without the AI, so a forgotten check-in doesn't leave the plan stuck in the
+ * past. Then, if the plan runs out within a week, plans the next one ({@link PlanExtender}); if the AI is down,
+ * the next night tries again.
  */
 @Component
 public class MissedDayJob {
@@ -31,14 +34,16 @@ public class MissedDayJob {
     private final TaskRepository tasks;
     private final CheckInRepository checkIns;
     private final ReplanService replanService;
+    private final PlanExtender planExtender;
     private final TransactionTemplate tx;
 
     public MissedDayJob(GoalRepository goals, TaskRepository tasks, CheckInRepository checkIns,
-                        ReplanService replanService, TransactionTemplate tx) {
+                        ReplanService replanService, PlanExtender planExtender, TransactionTemplate tx) {
         this.goals = goals;
         this.tasks = tasks;
         this.checkIns = checkIns;
         this.replanService = replanService;
+        this.planExtender = planExtender;
         this.tx = tx;
     }
 
@@ -46,6 +51,7 @@ public class MissedDayJob {
     public void run() {
         List<Long> goalIds = tx.execute(s -> goals.findByStatus(GoalStatus.ACTIVE).stream().map(Goal::getId).toList());
         int replanned = 0;
+        int extended = 0;
         for (Long goalId : goalIds) {
             try {
                 if (processGoal(goalId)) replanned++;
@@ -53,8 +59,16 @@ public class MissedDayJob {
                 // One bad goal must not stop the job for everyone else
                 log.error("Missed-day processing failed for goal {}", goalId, e);
             }
+            try {
+                if (planExtender.extendIfDue(goalId)) extended++;
+            } catch (AiUnavailableException e) {
+                log.warn("Could not plan the next week for goal {}, retrying tomorrow: {}", goalId, e.getMessage());
+            } catch (RuntimeException e) {
+                log.error("Planning the next week failed for goal {}", goalId, e);
+            }
         }
-        log.info("Missed-day job checked {} goals, re-planned {}", goalIds.size(), replanned);
+        log.info("Missed-day job checked {} goals, re-planned {}, planned the next week for {}",
+                goalIds.size(), replanned, extended);
     }
 
     private boolean processGoal(Long goalId) {

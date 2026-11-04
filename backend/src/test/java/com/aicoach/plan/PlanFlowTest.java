@@ -42,6 +42,13 @@ class PlanFlowTest {
         FakePlanGenerator fakePlanGenerator() {
             return new FakePlanGenerator();
         }
+
+        /** Never asked in these tests; fails like an unavailable AI if the nightly job finds a plan running low. */
+        @Bean
+        @Primary
+        FakeWeekPlanner fakeWeekPlanner() {
+            return new FakeWeekPlanner();
+        }
     }
 
     @Autowired
