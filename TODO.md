@@ -27,8 +27,9 @@ Tasks are treated as a series, so leftover work must come first, not land weeks 
   - Repeatedly skipped heavy days → suggest lowering extra time
 
 ## Known problems (found 2026-11-03)
-- [ ] **Order within a day:** tasks on the same day are listed by creation id, so a catch-up task shows
-      after that day's planned work (and the AI message describes it that way). Add a position field.
+- [x] **Order within a day:** tasks on the same day were listed by creation id, so a catch-up task showed
+      after that day's planned work, and later re-plans queued it behind them. Tasks now carry a series
+      `sequence`; catch-up tasks get original + 1.
 - [x] **Unreadable AI answers fail at once:** a plan with an impossible date ("2026-11-31") can't be parsed,
       which is treated as "provider down" (502) with no retry. Retry once and tell the model what was wrong.
 - [x] **No timeout on AI calls:** `gemini-3.8-flash` never answered and the request hung for minutes.
@@ -46,4 +47,7 @@ Tasks are treated as a series, so leftover work must come first, not land weeks 
 - [ ] Circuit breaker (Resilience4j): skip a model for a few minutes after repeated failures instead of
       waiting for its timeout on every request
 - [ ] Fill new days as the 14-day window moves (maybe covered by Stage 1 shifting; re-check after it)
+- [ ] Today is not frozen for a late check-in: checking in for yesterday re-plans from today
+- [ ] Optional: one task row per piece of work (`remainingMinutes` + a `task_log` history table)
+      instead of "Finish: X" copies
 - [ ] Optional: let AI pick a strategy (e.g. split a too-big task) that code then executes

@@ -100,15 +100,15 @@ public class AiCoachWriter implements CoachWriter {
 
     /** The first few tasks after the re-plan, so the message can point at what comes next. */
     private static List<String> nextTasks(RePlanRequest req, CatchUpPlan plan) {
-        record Row(LocalDate date, String title) {
+        record Row(LocalDate date, int sequence, String title) {
         }
         Map<Long, LocalDate> moved = new HashMap<>();
         plan.changes().stream().filter(c -> c.taskId() != null).forEach(c -> moved.put(c.taskId(), c.date()));
         List<Row> rows = new ArrayList<>();
-        plan.followUps().forEach(f -> rows.add(new Row(f.date(), f.title())));
-        req.upcoming().forEach(t -> rows.add(new Row(moved.getOrDefault(t.id(), t.date()), t.title())));
-        // Stable sort: on the same day, catch-up work comes first, as scheduled
-        return rows.stream().sorted(Comparator.comparing(Row::date)).limit(3)
+        plan.followUps().forEach(f -> rows.add(new Row(f.date(), f.sequence(), f.title())));
+        req.upcoming().forEach(t -> rows.add(new Row(moved.getOrDefault(t.id(), t.date()), t.sequence(), t.title())));
+        // Same order the user sees: by day, then by place in the series (catch-up work first)
+        return rows.stream().sorted(Comparator.comparing(Row::date).thenComparingInt(Row::sequence)).limit(3)
                 .map(r -> r.title() + " on " + r.date()).toList();
     }
 }

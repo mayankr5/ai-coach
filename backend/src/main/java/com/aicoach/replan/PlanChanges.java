@@ -16,11 +16,11 @@ public record PlanChanges(String coachMessage, List<TaskChange> changes) {
         RESIZE,
         /** Drop an upcoming task. Needs taskId. */
         REMOVE,
-        /** Schedule a new task. Needs title, date and minutes; milestoneId optional. */
+        /** Schedule a new task. Needs title, date, minutes and sequence; milestoneId optional. */
         ADD
     }
 
     public record TaskChange(Action action, Long taskId, String title, LocalDate date, Integer minutes,
-                             Long milestoneId) {
+                             Long milestoneId, Integer sequence) {
     }
 }

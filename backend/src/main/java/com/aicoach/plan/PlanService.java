@@ -22,6 +22,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -113,6 +114,11 @@ public class PlanService {
             }
         }
         em.flush();
+        // The series: by day, and within a day in the order the AI listed the tasks (the sort is stable)
+        newTasks.sort(Comparator.comparing(Task::getScheduledDate));
+        for (int i = 0; i < newTasks.size(); i++) {
+            newTasks.get(i).setSequence((i + 1) * Task.SEQUENCE_STEP);
+        }
         tasks.saveAll(newTasks);
 
         PlanRevision revision = new PlanRevision();

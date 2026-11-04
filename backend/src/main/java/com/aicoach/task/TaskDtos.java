@@ -20,11 +20,11 @@ public final class TaskDtos {
     }
 
     public record TaskResponse(Long id, Long goalId, Long milestoneId, String title,
-                               LocalDate scheduledDate, int estimatedMinutes, TaskStatus status) {
+                               LocalDate scheduledDate, int estimatedMinutes, TaskStatus status, int sequence) {
         public static TaskResponse from(Task t) {
             return new TaskResponse(t.getId(), t.getGoal().getId(),
                     t.getMilestone() == null ? null : t.getMilestone().getId(),
-                    t.getTitle(), t.getScheduledDate(), t.getEstimatedMinutes(), t.getStatus());
+                    t.getTitle(), t.getScheduledDate(), t.getEstimatedMinutes(), t.getStatus(), t.getSequence());
         }
     }
 }

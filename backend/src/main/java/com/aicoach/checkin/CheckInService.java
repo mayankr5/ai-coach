@@ -62,8 +62,7 @@ public class CheckInService {
             checkIn.setCoachMessage(result.coachMessage());
             List<TaskResponse> upcoming = tasks.findByGoalIdAndScheduledDateBetween(
                             goalId, from, from.plusDays(taskWindowDays - 1)).stream()
-                    .sorted((a, b) -> a.getScheduledDate().equals(b.getScheduledDate())
-                            ? a.getId().compareTo(b.getId()) : a.getScheduledDate().compareTo(b.getScheduledDate()))
+                    .sorted(Task.DAY_ORDER)
                     .map(TaskResponse::from)
                     .toList();
             return new CheckInResponse(checkIn.getId(), checkIn.getCheckInDate(), checkIn.getNote(),

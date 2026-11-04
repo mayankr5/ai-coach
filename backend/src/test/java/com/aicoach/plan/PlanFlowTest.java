@@ -22,6 +22,7 @@ import java.util.UUID;
 import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -87,6 +88,30 @@ class PlanFlowTest {
         mvc.perform(get("/api/v1/goals/" + goalId).header("Authorization", bearer(token)))
                 .andExpect(jsonPath("$.milestones[0].title").value("Basics"));
         assertThat(revisions.findAll()).anyMatch(r -> FakePlanGenerator.MODEL.equals(r.getAiModel()));
+    }
+
+    @Test
+    void seriesFollowsDatesThenTheAiListOrder() throws Exception {
+        // The AI listed a second task for today after all the later days
+        fake.willReturn(req -> {
+            GeneratedPlan plan = VALID.apply(req);
+            List<PlannedTask> tasks = new java.util.ArrayList<>(plan.milestones().getFirst().tasks());
+            tasks.add(new PlannedTask("Read the docs", req.today(), 15));
+            return new GeneratedPlan(List.of(new PlannedMilestone("Basics", req.taskWindowEnd(), tasks),
+                    plan.milestones().getLast()));
+        });
+        String token = register();
+        long goalId = createGoal(token);
+        mvc.perform(post(plan(goalId)).header("Authorization", bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.milestones[0].tasks[1].title").value("Read the docs"))
+                .andExpect(jsonPath("$.milestones[0].tasks[2].title").value(startsWith("Practice")));
+
+        mvc.perform(get("/api/v1/goals/" + goalId + "/tasks").header("Authorization", bearer(token)))
+                .andExpect(jsonPath("$[0].title").value("Install JDK"))
+                .andExpect(jsonPath("$[0].sequence").value(1000))
+                .andExpect(jsonPath("$[1].title").value("Read the docs"))
+                .andExpect(jsonPath("$[1].sequence").value(2000));
     }
 
     @Test

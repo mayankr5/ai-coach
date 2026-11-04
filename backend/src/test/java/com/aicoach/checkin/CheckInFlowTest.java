@@ -33,6 +33,7 @@ import java.util.List;
 import static com.aicoach.TestApi.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -144,6 +145,45 @@ class CheckInFlowTest {
                 .satisfies(t -> assertThat(t.getScheduledDate()).isEqualTo(today.plusDays(1)));
         assertThat(tasks.findById(tomorrowTask.getId()).orElseThrow().getScheduledDate()).isEqualTo(today.plusDays(2));
         assertThat(coachWriter.plans.getFirst().shifted()).isEqualTo(13);
+    }
+
+    @Test
+    void catchUpTaskIsListedFirstOnItsDay() throws Exception {
+        Task todayTask = taskOn(today);
+        LocalDate tomorrow = today.plusDays(1);
+        String finish = "Finish: " + todayTask.getTitle();
+        coachWriter.willReturn("Finish the rest first tomorrow.");
+
+        // Half of 40 minutes left: 20 + tomorrow's 40 fits in 60, so both stay on tomorrow
+        mvc.perform(post(checkIns()).header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body(today, todayTask.getId(), "PARTIAL", null)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.upcomingTasks[0].title").value(finish))
+                .andExpect(jsonPath("$.upcomingTasks[1].title").value("Study " + tomorrow));
+
+        mvc.perform(get("/api/v1/goals/" + goalId + "/tasks?date=" + tomorrow).header("Authorization", bearer(token)))
+                .andExpect(jsonPath("$[0].title").value(finish))
+                .andExpect(jsonPath("$[0].sequence").value(todayTask.getSequence() + 1))
+                .andExpect(jsonPath("$[1].title").value("Study " + tomorrow));
+    }
+
+    @Test
+    void taskMovedByHandGoesLastOnItsNewDay() throws Exception {
+        LocalDate tomorrow = today.plusDays(1);
+        Task later = taskOn(today.plusDays(3));
+
+        mvc.perform(patch("/api/v1/tasks/" + later.getId()).header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"scheduledDate\":\"" + tomorrow + "\"}"))
+                .andExpect(status().isOk());
+
+        mvc.perform(get("/api/v1/goals/" + goalId + "/tasks?date=" + tomorrow).header("Authorization", bearer(token)))
+                .andExpect(jsonPath("$[0].title").value("Study " + tomorrow))
+                .andExpect(jsonPath("$[1].title").value(later.getTitle()));
+        // Still ahead of the day after in the series, so future re-plans keep it on or before it
+        assertThat(tasks.findById(later.getId()).orElseThrow().getSequence())
+                .isLessThan(taskOn(today.plusDays(2)).getSequence());
     }
 
     @Test

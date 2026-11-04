@@ -177,6 +177,7 @@ public class ReplanService {
                     t.setTitle(c.title().strip());
                     t.setScheduledDate(c.date());
                     t.setEstimatedMinutes(c.minutes());
+                    t.setSequence(c.sequence());
                     tasks.save(t);
                 }
             }
@@ -201,6 +202,6 @@ public class ReplanService {
 
     private static TaskView view(Task t) {
         return new TaskView(t.getId(), t.getTitle(), t.getScheduledDate(), t.getEstimatedMinutes(),
-                t.getMilestone() == null ? null : t.getMilestone().getId(), t.getStatus());
+                t.getMilestone() == null ? null : t.getMilestone().getId(), t.getStatus(), t.getSequence());
     }
 }

@@ -65,7 +65,7 @@ For local development, put keys in `backend/.env` (git-ignored, loaded automatic
 GEMINI_API_KEY=your-key
 ```
 
-After each check-in, `CatchUpScheduler` (plain code) puts leftover work first on the next day and shifts later tasks forward in order, using the goal's `extraMinutesPerDay` on catch-up days. The AI only writes the coach message; if it is down, a fixed message is used, so check-ins never fail. A nightly job (`MISSED_DAY_CRON`, default 03:00 UTC) marks overdue tasks as skipped for goals with no check-in and re-plans them without calling the AI.
+After each check-in, `CatchUpScheduler` (plain code) puts leftover work first on the next day and shifts later tasks forward in order, using the goal's `extraMinutesPerDay` on catch-up days. Tasks form one series (`sequence`, spaced by 1000): the scheduler walks them in that order, a catch-up task takes the number right after the task it continues, and every task list is sorted by day, then sequence. The AI only writes the coach message; if it is down, a fixed message is used, so check-ins never fail. A nightly job (`MISSED_DAY_CRON`, default 03:00 UTC) marks overdue tasks as skipped for goals with no check-in and re-plans them without calling the AI.
 
 Every plan is checked by `PlanValidator` (dates, daily minute limit, milestone order) whatever the model.
 

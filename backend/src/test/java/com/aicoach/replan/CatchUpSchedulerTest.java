@@ -11,6 +11,7 @@ import java.time.LocalDate;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 class CatchUpSchedulerTest {
 
@@ -28,7 +29,7 @@ class CatchUpSchedulerTest {
         CatchUpPlan plan = scheduler.schedule(req);
 
         assertThat(plan.changes()).containsExactly(
-                new TaskChange(Action.ADD, null, "Finish: Install Spring Boot", FROM, 24, null));
+                new TaskChange(Action.ADD, null, "Finish: Install Spring Boot", FROM, 24, null, 1));
         assertThat(plan.extraDays()).containsExactly(FROM);
         assertThat(plan.shifted()).isZero();
         assertThat(perDay(req, plan)).containsEntry(FROM, 72);
@@ -57,7 +58,7 @@ class CatchUpSchedulerTest {
         long id = 1;
         for (int d = 0; d < 5; d++) {
             for (int i = 0; i < 3; i++) {
-                upcoming.add(new TaskView(id++, "Task " + d + "." + i, FROM.plusDays(d), 20, null, TaskStatus.PENDING));
+                upcoming.add(task(id++, "Task " + d + "." + i, FROM.plusDays(d), 20));
             }
         }
         RePlanRequest req = request(20, FAR, upcoming, List.of(missed(100L, "Skipped day", 60, TaskStatus.SKIPPED)));
@@ -75,8 +76,8 @@ class CatchUpSchedulerTest {
     void nothingMissedLeavesPlanUnchanged() {
         // Even a day that is over the limit is the user's choice; nothing is moved without missed work
         RePlanRequest req = request(0, FAR, List.of(
-                new TaskView(1L, "Long session", FROM, 50, null, TaskStatus.PENDING),
-                new TaskView(2L, "Extra reading", FROM, 30, null, TaskStatus.PENDING)), List.of());
+                task(1L, "Long session", FROM, 50),
+                task(2L, "Extra reading", FROM, 30)), List.of());
 
         CatchUpPlan plan = scheduler.schedule(req);
 
@@ -86,7 +87,7 @@ class CatchUpSchedulerTest {
 
     @Test
     void workPastTheDeadlineIsReportedNotLost() {
-        RePlanRequest req = request(0, FROM, List.of(new TaskView(1L, "Full day", FROM, 60, null, TaskStatus.PENDING)),
+        RePlanRequest req = request(0, FROM, List.of(task(1L, "Full day", FROM, 60)),
                 List.of(missed(100L, "Generics", 30, TaskStatus.SKIPPED)));
 
         CatchUpPlan plan = scheduler.schedule(req);
@@ -99,8 +100,8 @@ class CatchUpSchedulerTest {
     @Test
     void taskBiggerThanADayGetsADayToItself() {
         RePlanRequest req = request(0, FAR, List.of(
-                        new TaskView(1L, "Build project", FROM, 90, null, TaskStatus.PENDING),
-                        new TaskView(2L, "Write tests", FROM.plusDays(1), 30, null, TaskStatus.PENDING)),
+                        task(1L, "Build project", FROM, 90),
+                        task(2L, "Write tests", FROM.plusDays(1), 30)),
                 List.of(missed(100L, "Setup", 20, TaskStatus.SKIPPED)));
 
         CatchUpPlan plan = scheduler.schedule(req);
@@ -110,16 +111,39 @@ class CatchUpSchedulerTest {
                 .isEqualTo("Added 1 catch-up task starting " + FROM + ". Moved 2 later tasks forward to keep the order.");
     }
 
+    @Test
+    void seriesOrderDecidesTheQueueNotId() {
+        // An earlier catch-up task (higher id, lower sequence) must stay ahead of the day's planned lesson
+        TaskView lesson = new TaskView(5L, "Maven lesson", FROM, 40, null, TaskStatus.PENDING, 4000);
+        TaskView catchUp = new TaskView(9L, "Finish: OOP", FROM, 30, null, TaskStatus.PENDING, 3001);
+        RePlanRequest req = request(0, FAR, List.of(lesson, catchUp),
+                List.of(new TaskView(8L, "Generics", FROM.minusDays(1), 20, null, TaskStatus.SKIPPED, 1000)));
+
+        CatchUpPlan plan = scheduler.schedule(req);
+
+        // Generics (1001) and Finish: OOP (3001) fill today; the lesson moves to tomorrow, not the catch-up
+        assertThat(plan.followUps()).extracting(TaskChange::date, TaskChange::sequence).containsExactly(
+                tuple(FROM, 1001));
+        assertThat(plan.changes()).filteredOn(c -> c.action() == Action.MOVE)
+                .extracting(TaskChange::taskId, TaskChange::date)
+                .containsExactly(tuple(5L, FROM.plusDays(1)));
+    }
+
     private static List<TaskView> daily(int days, int minutes) {
         List<TaskView> tasks = new ArrayList<>();
         for (int d = 0; d < days; d++) {
-            tasks.add(new TaskView((long) d + 1, "Day " + d, FROM.plusDays(d), minutes, null, TaskStatus.PENDING));
+            tasks.add(task((long) d + 1, "Day " + d, FROM.plusDays(d), minutes));
         }
         return tasks;
     }
 
     private static TaskView missed(long id, String title, int minutes, TaskStatus status) {
-        return new TaskView(id, title, FROM.minusDays(1), minutes, null, status);
+        return new TaskView(id, title, FROM.minusDays(1), minutes, null, status, 0);
+    }
+
+    /** Upcoming task whose place in the series follows its id. */
+    private static TaskView task(long id, String title, LocalDate date, int minutes) {
+        return new TaskView(id, title, date, minutes, null, TaskStatus.PENDING, (int) id * 1000);
     }
 
     /** Dates of the upcoming tasks after applying the plan, in their original order. */

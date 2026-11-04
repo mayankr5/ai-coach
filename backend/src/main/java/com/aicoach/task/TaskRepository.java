@@ -10,9 +10,7 @@ import java.util.Optional;
 
 public interface TaskRepository extends JpaRepository<Task, Long> {
 
-    List<Task> findByGoalIdAndScheduledDateOrderByIdAsc(Long goalId, LocalDate date);
-
-    List<Task> findByGoalIdOrderByScheduledDateAscIdAsc(Long goalId);
+    List<Task> findByGoalIdAndScheduledDateOrderBySequenceAscIdAsc(Long goalId, LocalDate date);
 
     /** True once the user has recorded any progress on the goal. */
     boolean existsByGoalIdAndStatusNot(Long goalId, TaskStatus status);
@@ -23,7 +21,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
 
     @Query("""
             select t from Task t where t.goal.id = :goalId and t.status = com.aicoach.task.TaskStatus.PENDING
-            and t.scheduledDate >= :from order by t.scheduledDate, t.id""")
+            and t.scheduledDate >= :from order by t.sequence, t.id""")
     List<Task> findUpcomingPending(Long goalId, LocalDate from);
 
     @Query("""
@@ -35,10 +33,14 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     @Query("""
             select t from Task t where t.goal.id = :goalId and t.carriedOver = false and t.scheduledDate < :before
             and t.status in (com.aicoach.task.TaskStatus.SKIPPED, com.aicoach.task.TaskStatus.PARTIAL)
-            order by t.scheduledDate, t.id""")
+            order by t.sequence, t.id""")
     List<Task> findUncarriedMissed(Long goalId, LocalDate before);
 
     List<Task> findByGoalIdAndScheduledDateBetween(Long goalId, LocalDate from, LocalDate to);
+
+    /** Highest sequence number on or before a day, so a task moved there can go last on it. */
+    @Query("select coalesce(max(t.sequence), 0) from Task t where t.goal.id = :goalId and t.scheduledDate <= :date")
+    int maxSequenceUntil(Long goalId, LocalDate date);
 
     List<Task> findByGoalIdAndIdIn(Long goalId, List<Long> ids);
 

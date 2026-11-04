@@ -21,7 +21,9 @@ public record RePlanRequest(Long goalId, String title, String description, Exper
                             Double completionRate, String note, List<TaskView> upcoming, List<TaskView> missed,
                             List<MilestoneView> milestones) {
 
-    public record TaskView(Long id, String title, LocalDate date, int minutes, Long milestoneId, TaskStatus status) {
+    /** @param sequence place in the goal's series; upcoming tasks are scheduled in this order */
+    public record TaskView(Long id, String title, LocalDate date, int minutes, Long milestoneId, TaskStatus status,
+                           int sequence) {
     }
 
     public record MilestoneView(Long id, String title, LocalDate targetDate) {

@@ -17,6 +17,8 @@ import java.util.*;
  *       but never on more than {@value #MAX_EXTRA_DAYS_IN_A_ROW} days in a row.</li>
  *   <li>Tasks only ever move later, never earlier, and whole tasks move (no splitting).</li>
  *   <li>A task too big for any day gets a day to itself.</li>
+ *   <li>A catch-up task takes the sequence number right after the task it continues, so it is listed
+ *       first on its day and stays ahead of later work in future re-plans.</li>
  *   <li>Work that can't fit before the deadline is put on the deadline and reported as overflow.</li>
  * </ul>
  * With nothing missed, the plan is returned unchanged.
@@ -25,6 +27,9 @@ import java.util.*;
 public class CatchUpScheduler {
 
     static final int MAX_EXTRA_DAYS_IN_A_ROW = 2;
+
+    private static final Comparator<TaskView> SERIES = Comparator.comparingInt(TaskView::sequence)
+            .thenComparing(TaskView::id);
 
     private record Item(TaskView task, TaskChange followUp, LocalDate earliest) {
         int minutes() {
@@ -37,11 +42,11 @@ public class CatchUpScheduler {
         int withExtra = normal + req.extraMinutesPerDay();
 
         List<Item> queue = new ArrayList<>();
-        for (TaskView missed : req.missed()) {
-            queue.add(new Item(null, followUp(missed, normal), req.from()));
-        }
+        req.missed().stream()
+                .sorted(SERIES)
+                .forEach(missed -> queue.add(new Item(null, followUp(missed, normal), req.from())));
         req.upcoming().stream()
-                .sorted(Comparator.comparing(TaskView::date).thenComparing(TaskView::id))
+                .sorted(SERIES)
                 .forEach(t -> queue.add(new Item(t, null, t.date())));
 
         Map<LocalDate, Integer> used = new HashMap<>();
@@ -77,11 +82,11 @@ public class CatchUpScheduler {
 
             if (item.followUp() != null) {
                 TaskChange add = new TaskChange(Action.ADD, null, item.followUp().title(), day,
-                        item.minutes(), item.followUp().milestoneId());
+                        item.minutes(), item.followUp().milestoneId(), item.followUp().sequence());
                 changes.add(add);
                 followUps.add(add);
             } else if (!day.equals(item.task().date())) {
-                changes.add(new TaskChange(Action.MOVE, item.task().id(), null, day, null, null));
+                changes.add(new TaskChange(Action.MOVE, item.task().id(), null, day, null, null, null));
                 shifted++;
             }
         }
@@ -106,6 +111,6 @@ public class CatchUpScheduler {
         boolean partial = missed.status() == TaskStatus.PARTIAL;
         String title = partial ? "Finish: " + missed.title() : missed.title();
         int minutes = Math.min(normal, partial ? Math.max(5, missed.minutes() / 2) : missed.minutes());
-        return new TaskChange(Action.ADD, null, title, null, minutes, missed.milestoneId());
+        return new TaskChange(Action.ADD, null, title, null, minutes, missed.milestoneId(), missed.sequence() + 1);
     }
 }

@@ -27,7 +27,7 @@ public class TaskService {
     public List<TaskResponse> forDay(Long userId, Long goalId, LocalDate date) {
         Goal goal = goalService.findOwned(userId, goalId);
         LocalDate day = date != null ? date : LocalDate.now(ZoneId.of(goal.getUser().getTimezone()));
-        return tasks.findByGoalIdAndScheduledDateOrderByIdAsc(goal.getId(), day).stream()
+        return tasks.findByGoalIdAndScheduledDateOrderBySequenceAscIdAsc(goal.getId(), day).stream()
                 .map(TaskResponse::from)
                 .toList();
     }
@@ -37,7 +37,11 @@ public class TaskService {
         Task task = tasks.findOwned(taskId, userId)
                 .orElseThrow(() -> new NotFoundException("Task not found"));
         if (req.title() != null) task.setTitle(req.title());
-        if (req.scheduledDate() != null) task.setScheduledDate(req.scheduledDate());
+        if (req.scheduledDate() != null && !req.scheduledDate().equals(task.getScheduledDate())) {
+            // Keeps the series order matching the dates: the moved task goes last on its new day
+            task.setSequence(tasks.maxSequenceUntil(task.getGoal().getId(), req.scheduledDate()) + 1);
+            task.setScheduledDate(req.scheduledDate());
+        }
         if (req.estimatedMinutes() != null) task.setEstimatedMinutes(req.estimatedMinutes());
         if (req.status() != null) task.setStatus(req.status());
         return TaskResponse.from(task);
