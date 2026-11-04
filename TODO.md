@@ -50,6 +50,8 @@ Tasks are treated as a series, so leftover work must come first, not land weeks 
       or raise `app.ai.plan-timeout` for local-only use.
 
 ## Later
+- [ ] Tasks left unmarked on a day that has a check-in stay PENDING forever (the nightly job skips goals
+      checked in yesterday). The web app requires every task to be marked; the API should handle it too
 - [ ] Security: move the web app's refresh token from localStorage to an httpOnly cookie (needs CSRF protection)
 - [ ] Circuit breaker (Resilience4j): skip a model for a few minutes after repeated failures instead of
       waiting for its timeout on every request
