@@ -1,7 +1,5 @@
-import { screen, userEvent, waitFor } from '@testing-library/react-native'
+import { screen, userEvent } from '@testing-library/react-native'
 import { router } from 'expo-router'
-import { Alert } from 'react-native'
-import { tokens } from '../api/tokens'
 import GoalsScreen from '../app/index'
 import { json, loggedIn, pathOf, renderScreen } from '../test/render'
 
@@ -44,21 +42,13 @@ describe('GoalsScreen', () => {
     expect(router.push).toHaveBeenCalledWith('/goals/new')
   })
 
-  it('logs out once confirmed', async () => {
-    const alert = jest.spyOn(Alert, 'alert')
-    const api = await loggedIn(request => pathOf(request) === '/api/v1/auth/logout' ? new Response(null, { status: 204 })
-      : page([]))
+  it('opens settings from the account button', async () => {
+    await loggedIn(() => page([]))
     const user = userEvent.setup()
     await renderScreen(<GoalsScreen />)
 
-    await user.press(await screen.findByRole('button', { name: 'Account' }))
-    expect(alert).toHaveBeenCalledWith('Asha', 'a@example.com', expect.any(Array))
-    const logOut = alert.mock.calls[0][2]!.find(b => b.text === 'Log out')!
-    expect(api.requests().some(r => pathOf(r) === '/api/v1/auth/logout')).toBe(false)
+    await user.press(await screen.findByRole('button', { name: 'Settings' }))
 
-    logOut.onPress!()
-
-    await waitFor(() => expect(api.requests().some(r => pathOf(r) === '/api/v1/auth/logout')).toBe(true))
-    expect(await tokens.refresh()).toBeNull()
+    expect(router.push).toHaveBeenCalledWith('/settings')
   })
 })

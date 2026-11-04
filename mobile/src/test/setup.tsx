@@ -50,3 +50,29 @@ jest.mock('expo-haptics', () => ({
 }))
 
 afterEach(() => AsyncStorage.clear())
+
+// Scheduled reminders are recorded; permission is granted unless a test says otherwise
+jest.mock('expo-notifications', () => {
+  const scheduled: { content: unknown; trigger: { date: Date } }[] = []
+  return {
+    mockScheduled: scheduled,
+    AndroidImportance: { DEFAULT: 3 },
+    SchedulableTriggerInputTypes: { DATE: 'date' },
+    DEFAULT_ACTION_IDENTIFIER: 'expo.modules.notifications.actions.DEFAULT',
+    setNotificationChannelAsync: jest.fn(async () => null),
+    setNotificationHandler: jest.fn(),
+    getPermissionsAsync: jest.fn(async () => ({ granted: true, canAskAgain: true })),
+    requestPermissionsAsync: jest.fn(async () => ({ granted: true, canAskAgain: true })),
+    scheduleNotificationAsync: jest.fn(async (request: { content: unknown; trigger: { date: Date } }) => {
+      scheduled.push(request)
+      return String(scheduled.length)
+    }),
+    cancelAllScheduledNotificationsAsync: jest.fn(async () => void scheduled.splice(0)),
+    useLastNotificationResponse: jest.fn(() => undefined),
+    clearLastNotificationResponseAsync: jest.fn(async () => undefined),
+  }
+})
+
+afterEach(() => {
+  jest.requireMock<{ mockScheduled: unknown[] }>('expo-notifications').mockScheduled.splice(0)
+})

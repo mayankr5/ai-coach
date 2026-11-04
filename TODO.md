@@ -37,7 +37,8 @@ Tasks are treated as a series, so leftover work must come first, not land weeks 
 - [x] Goal screen: generate a plan, coach message, today's check-in, next 7 days, progress, milestones; last data
       saved on the phone and shown offline (deleted on logout); a saved session survives an offline start
 - [x] "Get back on track": move dates and add time confirmed in a system dialog; drop tasks in a sheet
-- [ ] Daily check-in reminder (local notification)
+- [x] Daily check-in reminder: local notifications for the next 7 days, skipped once every goal is checked in;
+      a setting of the phone (Settings screen), cleared on logout
 - [ ] CI workflow and README
 - [ ] Later: store builds (EAS), server push, minimum app version check
 

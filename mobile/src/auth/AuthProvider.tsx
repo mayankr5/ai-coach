@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { api, call, refreshTokens, setSessionExpiredHandler, type Schemas } from '../api/client'
 import { persistOptions } from '../api/queryClient'
 import { tokens } from '../api/tokens'
+import { clearReminders } from '../reminders'
 import { AuthContext, type Auth } from './useAuth'
 
 type User = Schemas['UserResponse']
@@ -28,13 +29,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.setItem(USER_KEY, JSON.stringify(me)).catch(() => undefined)
   }, [])
 
-  // Everything about the user leaves the phone: tokens, who they are and the saved plan
+  // Everything about the user leaves the phone: tokens, who they are, the saved plan and reminders
   const endSession = useCallback(() => {
     void tokens.clear()
     void AsyncStorage.removeItem(USER_KEY).catch(() => undefined)
     setUser(null)
     queryClient.clear()
     void persistOptions.persister.removeClient()
+    void clearReminders()
   }, [queryClient])
 
   // Secure storage is async, so a saved session is always looked for before the first screen shows.

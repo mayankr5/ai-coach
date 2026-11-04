@@ -4,6 +4,7 @@ import { messageOf } from '../../api/client'
 import { useCheckIn, useTasks, type Task, type TaskStatus } from '../../api/plan'
 import { today, toIsoDate } from '../../dates'
 import { haptics } from '../../haptics'
+import { refreshReminders } from '../../reminders'
 import { colors, radius, space } from '../../theme'
 import { Button, ErrorMessage, Field, Spinner } from '../ui'
 import { Card } from './Card'
@@ -58,7 +59,13 @@ function CheckInForm({ goalId, day, tasks, checkedIn }:
       date: day,
       tasks: Object.entries(results).map(([taskId, status]) => ({ taskId: Number(taskId), status })),
       note: note.trim() || undefined,
-    }, { onSuccess: haptics.success })
+    }, {
+      onSuccess: () => {
+        haptics.success()
+        // Checked in: today's reminder may no longer be needed
+        void refreshReminders()
+      },
+    })
   }
 
   return (

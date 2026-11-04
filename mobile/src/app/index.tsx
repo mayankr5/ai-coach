@@ -1,6 +1,6 @@
 import { router, Stack } from 'expo-router'
 import { useState } from 'react'
-import { Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native'
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native'
 import { messageOf } from '../api/client'
 import { useGoals, type GoalStatus } from '../api/goals'
 import { useAuth } from '../auth/useAuth'
@@ -60,17 +60,13 @@ export default function GoalsScreen() {
   )
 }
 
-/** Shows who is logged in, with the option to log out. */
+/** The user's initial; opens settings (reminder, log out). */
 function AccountButton() {
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
   if (!user) return null
-  const confirm = () => Alert.alert(user.displayName, user.email, [
-    { text: 'Cancel', style: 'cancel' },
-    { text: 'Log out', style: 'destructive', onPress: () => void logout() },
-  ])
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel="Account" hitSlop={8} onPress={confirm}
-      style={styles.avatar}>
+    <Pressable accessibilityRole="button" accessibilityLabel="Settings" hitSlop={8}
+      onPress={() => router.push('/settings')} style={styles.avatar}>
       <Text style={styles.avatarText}>{user.displayName.charAt(0).toUpperCase()}</Text>
     </Pressable>
   )
