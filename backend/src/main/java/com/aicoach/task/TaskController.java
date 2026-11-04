@@ -1,5 +1,6 @@
 package com.aicoach.task;
 
+import com.aicoach.common.BadRequestException;
 import com.aicoach.security.AuthUser;
 import com.aicoach.task.TaskDtos.*;
 import jakarta.validation.Valid;
@@ -20,11 +21,22 @@ public class TaskController {
         this.taskService = taskService;
     }
 
+    /** One day ({@code date}, default today in the user's timezone) or a range ({@code from} and {@code to}). */
     @GetMapping("/goals/{goalId}/tasks")
-    public List<TaskResponse> forDay(@AuthenticationPrincipal AuthUser user, @PathVariable Long goalId,
-                                     @RequestParam(required = false)
-                                     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return taskService.forDay(user.id(), goalId, date);
+    public List<TaskResponse> list(@AuthenticationPrincipal AuthUser user, @PathVariable Long goalId,
+                                   @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+                                   LocalDate date,
+                                   @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+                                   LocalDate from,
+                                   @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+                                   LocalDate to) {
+        if (from == null && to == null) {
+            return taskService.forDay(user.id(), goalId, date);
+        }
+        if (date != null || from == null || to == null) {
+            throw new BadRequestException("Use either date, or both from and to");
+        }
+        return taskService.between(user.id(), goalId, from, to);
     }
 
     @PatchMapping("/tasks/{id}")

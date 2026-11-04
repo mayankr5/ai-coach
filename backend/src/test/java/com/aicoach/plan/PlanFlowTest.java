@@ -103,6 +103,36 @@ class PlanFlowTest {
     }
 
     @Test
+    void planAndTaskRangesCanBeRead() throws Exception {
+        fake.willReturn(VALID);
+        String token = register();
+        long goalId = createGoal(token);
+        mvc.perform(get(plan(goalId)).header("Authorization", bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.milestones").isEmpty());
+        mvc.perform(post(plan(goalId)).header("Authorization", bearer(token))).andExpect(status().isOk());
+
+        mvc.perform(get(plan(goalId)).header("Authorization", bearer(token)))
+                .andExpect(jsonPath("$.milestones[0].title").value("Basics"))
+                .andExpect(jsonPath("$.milestones[0].tasks.length()").value(12))
+                .andExpect(jsonPath("$.milestones[0].tasks[0].title").value("Install JDK"));
+
+        LocalDate today = LocalDate.now(ZoneOffset.UTC);
+        String tasks = "/api/v1/goals/" + goalId + "/tasks";
+        mvc.perform(get(tasks + "?from=" + today + "&to=" + today.plusDays(2)).header("Authorization", bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(3))
+                .andExpect(jsonPath("$[0].title").value("Install JDK"))
+                .andExpect(jsonPath("$[2].scheduledDate").value(today.plusDays(2).toString()));
+        mvc.perform(get(tasks + "?from=" + today).header("Authorization", bearer(token)))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get(tasks + "?from=" + today + "&to=" + today.minusDays(1)).header("Authorization", bearer(token)))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get(tasks + "?from=" + today + "&to=" + today.plusDays(62)).header("Authorization", bearer(token)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void seriesFollowsDatesThenTheAiListOrder() throws Exception {
         // The AI listed a second task for today after all the later days
         fake.willReturn(req -> {

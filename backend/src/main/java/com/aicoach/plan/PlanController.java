@@ -18,6 +18,11 @@ public class PlanController {
         this.planExtender = planExtender;
     }
 
+    @GetMapping
+    public PlanResponse get(@AuthenticationPrincipal AuthUser user, @PathVariable Long goalId) {
+        return planService.get(user.id(), goalId);
+    }
+
     @PostMapping
     public PlanResponse generate(@AuthenticationPrincipal AuthUser user, @PathVariable Long goalId) {
         return planService.generate(user.id(), goalId);

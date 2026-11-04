@@ -37,11 +37,12 @@ Tests use Testcontainers, so Docker must be running: `cd backend && ./mvnw test`
 | GET  | `/api/v1/goals/{id}` | Bearer token |
 | PATCH | `/api/v1/goals/{id}` | Bearer token |
 | DELETE | `/api/v1/goals/{id}` | Bearer token |
-| GET  | `/api/v1/goals/{id}/tasks?date=YYYY-MM-DD` (default: today in the user's timezone) | Bearer token |
+| GET  | `/api/v1/goals/{id}/tasks?date=YYYY-MM-DD` (default: today in the user's timezone) or `?from=&to=` (up to 62 days) | Bearer token |
 | PATCH | `/api/v1/tasks/{id}` | Bearer token |
 | POST | `/api/v1/goals/{id}/check-ins` (record today's/yesterday's results, then re-plan) | Bearer token |
 | GET  | `/api/v1/goals/{id}/check-ins` | Bearer token |
 | GET  | `/api/v1/goals/{id}/progress` | Bearer token |
+| GET  | `/api/v1/goals/{id}/plan` (milestones with their tasks) | Bearer token |
 | POST | `/api/v1/goals/{id}/plan` (AI-generated; 409 once progress exists, 502 on AI failure) | Bearer token |
 | POST | `/api/v1/goals/{id}/plan/extend` (plan the week after the last task; 409 at the deadline or 28+ days ahead) | Bearer token |
 

@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDate;
@@ -132,6 +133,13 @@ public class PlanService {
         return toResponse(goal, newTasks);
     }
 
+    /** The current plan: milestones in order, each with its tasks by day and place in the series. */
+    @Transactional(readOnly = true)
+    public PlanResponse get(Long userId, Long goalId) {
+        Goal goal = goalService.findOwned(userId, goalId);
+        return toResponse(goal, tasks.findByGoalId(goal.getId()).stream().sorted(Task.DAY_ORDER).toList());
+    }
+
     private void ensureNoProgress(Goal goal) {
         if (tasks.existsByGoalIdAndStatusNot(goal.getId(), TaskStatus.PENDING)) {
             throw new ConflictException("Goal already has progress; the plan is adjusted by daily check-ins");
@@ -139,7 +147,9 @@ public class PlanService {
     }
 
     private static PlanResponse toResponse(Goal goal, List<Task> goalTasks) {
-        Map<Milestone, List<PlanTask>> byMilestone = goalTasks.stream().collect(Collectors.groupingBy(
+        // Every task belongs to a milestone: plans always have one, and later tasks inherit or are assigned it
+        Map<Milestone, List<PlanTask>> byMilestone = goalTasks.stream().filter(t -> t.getMilestone() != null)
+                .collect(Collectors.groupingBy(
                 Task::getMilestone,
                 Collectors.mapping(t -> new PlanTask(t.getId(), t.getTitle(), t.getScheduledDate(),
                         t.getEstimatedMinutes(), t.getStatus()), Collectors.toList())));
